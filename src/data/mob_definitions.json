@@ -258,5 +258,23 @@
         { "itemId": "desert_sand", "chance": 0.9, "minCount": 1, "maxCount": 3 }
       ]
     }
+  },
+  "skeleton_mage": {
+    "type": "skeleton_mage",
+    "baseHealth": 50,
+    "baseDamage": 12,
+    "modelUrl": "models/chars/enemies/skeleton_mage.glb",
+    "modelHeight": 2.2,
+    "attackRange": 15.0,
+    "clips": { "idle": "Idle", "walk": "Walk", "run": "Run" },
+    "lootTable": {
+      "minGold": 200,
+      "maxGold": 500,
+      "items": [
+        { "itemId": "mana_potion", "chance": 0.3, "minCount": 1, "maxCount": 1 },
+        { "itemId": "bronze_ring", "chance": 0.05, "minCount": 1, "maxCount": 1 },
+        { "itemId": "broken_tooth", "chance": 0.2, "minCount": 1, "maxCount": 1 }
+      ]
+    }
   }
 }

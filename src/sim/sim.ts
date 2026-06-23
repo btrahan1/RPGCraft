@@ -202,6 +202,7 @@ export class Sim {
   readonly projectiles: Projectile[] = [];
   readonly lootContainers: LootContainer[] = [];
   combatEvents: CombatEvent[] = [];
+  soundEvents: string[] = [];
 
   /** Index of the portal the player is currently near, or -1 if none. */
   nearPortalIndex: number = -1;
@@ -306,6 +307,7 @@ export class Sim {
       p.health = p.maxHealth;
       p.mana = p.maxMana;
       p.nextLevelExp = calcLevelUpXp(p.level);
+      this.soundEvents.push('level_up');
       this.combatEvents.push({
         id: this.generateId('evt'),
         type: 'damage',
@@ -321,6 +323,7 @@ export class Sim {
     const p = this.player;
 
     this.combatEvents = [];
+    this.soundEvents = [];
 
     // ── Hotbar Item Activation ──────────────────────────────────────
     if (input.useHotbar3) {
@@ -460,6 +463,7 @@ export class Sim {
             duration: spell.castDuration,
             targetId: p.targetId
           };
+          this.soundEvents.push('cast_fireball');
         }
       } else if (input.castSpell2) {
         const spell = spellDefinitions.find(s => s.id === 'frostbolt');
@@ -472,6 +476,7 @@ export class Sim {
             duration: spell.castDuration,
             targetId: p.targetId
           };
+          this.soundEvents.push('cast_frostbolt');
         }
       }
     }
@@ -483,61 +488,93 @@ export class Sim {
     // ── Projectile Simulation ───────────────────────────────────────
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
       const proj = this.projectiles[i];
-      const target = this.mobs.find(m => m.id === proj.targetId);
+      let targetX = 0;
+      let targetZ = 0;
+      let isTargetAlive = false;
 
-      if (!target || target.health <= 0) {
+      if (proj.targetId === 'player') {
+        targetX = p.x;
+        targetZ = p.z;
+        isTargetAlive = p.health > 0;
+      } else {
+        const mobTarget = this.mobs.find(m => m.id === proj.targetId);
+        if (mobTarget) {
+          targetX = mobTarget.x;
+          targetZ = mobTarget.z;
+          isTargetAlive = mobTarget.health > 0;
+        }
+      }
+
+      if (!isTargetAlive) {
         this.projectiles.splice(i, 1);
         continue;
       }
 
-      const dx = target.x - proj.x;
-      const dz = target.z - proj.z;
+      const dx = targetX - proj.x;
+      const dz = targetZ - proj.z;
       const distance = Math.sqrt(dx * dx + dz * dz);
       const step = proj.speed * dt;
 
       if (distance <= step) {
-        const killed = target.health <= proj.damage;
-        target.health = Math.max(0, target.health - proj.damage);
-        if (target.health > 0) {
-          target.state = 'chasing';
-          target.moving = true;
-        }
-
-        this.combatEvents.push({
-          id: this.generateId('evt'),
-          type: 'damage',
-          targetId: target.id,
-          value: proj.damage,
-          x: target.x,
-          z: target.z
-        });
-
-        if (killed) {
-          const xpGained = getMobXpValue(target.level);
-          this.grantXp(xpGained);
-          this.spawnLoot(target.type, target.x, target.z);
-
-          // Update kill quest progress
-          for (const q of p.quests) {
-            if (q.completed) continue;
-            const qDef = (questDefinitions as any)[q.questId];
-            if (qDef && qDef.type === 'kill' && qDef.targetType === target.type) {
-              if (q.progress < qDef.targetCount) {
-                q.progress = Math.min(qDef.targetCount, q.progress + 1);
-              }
-            }
+        if (proj.targetId === 'player') {
+          p.health = Math.max(0, p.health - proj.damage);
+          this.soundEvents.push('projectile_hit');
+          this.soundEvents.push('player_damaged');
+          this.combatEvents.push({
+            id: this.generateId('evt'),
+            type: 'damage',
+            targetId: 'player',
+            value: proj.damage,
+            x: p.x,
+            z: p.z
+          });
+        } else {
+          const mobTarget = this.mobs.find(m => m.id === proj.targetId)!;
+          const killed = mobTarget.health <= proj.damage;
+          mobTarget.health = Math.max(0, mobTarget.health - proj.damage);
+          this.soundEvents.push('projectile_hit');
+          if (mobTarget.health > 0) {
+            mobTarget.state = 'chasing';
+            mobTarget.moving = true;
+          } else {
+            this.soundEvents.push('mob_death');
           }
 
           this.combatEvents.push({
             id: this.generateId('evt'),
             type: 'damage',
-            targetId: 'player',
-            value: xpGained,
-            x: p.x,
-            z: p.z
+            targetId: mobTarget.id,
+            value: proj.damage,
+            x: mobTarget.x,
+            z: mobTarget.z
           });
-        }
 
+          if (killed) {
+            const xpGained = getMobXpValue(mobTarget.level);
+            this.grantXp(xpGained);
+            this.spawnLoot(mobTarget.type, mobTarget.x, mobTarget.z);
+
+            // Update kill quest progress
+            for (const q of p.quests) {
+              if (q.completed) continue;
+              const qDef = (questDefinitions as any)[q.questId];
+              if (qDef && qDef.type === 'kill' && qDef.targetType === mobTarget.type) {
+                if (q.progress < qDef.targetCount) {
+                  q.progress = Math.min(qDef.targetCount, q.progress + 1);
+                }
+              }
+            }
+
+            this.combatEvents.push({
+              id: this.generateId('evt'),
+              type: 'damage',
+              targetId: 'player',
+              value: xpGained,
+              x: p.x,
+              z: p.z
+            });
+          }
+        }
         this.projectiles.splice(i, 1);
       } else {
         proj.x += (dx / distance) * step;
@@ -587,8 +624,10 @@ export class Sim {
           const dx = p.x - m.x;
           const dz = p.z - m.z;
           const distance = Math.sqrt(dx * dx + dz * dz);
+          const mobDef = MOB_REGISTRY[m.type];
+          const attackRange = mobDef?.attackRange ?? 1.5;
 
-          if (distance > 1.5) {
+          if (distance > attackRange) {
             m.facing = Math.atan2(dx, dz);
             m.moving = true;
             const runSpeed = gameConfig.combat.mobRunSpeed;
@@ -604,20 +643,35 @@ export class Sim {
             }
           } else {
             m.moving = false;
+            m.facing = Math.atan2(dx, dz);
             m.attackCooldown -= dt;
             if (m.attackCooldown <= 0) {
-              const mobDef = MOB_REGISTRY[m.type];
-              let dmg = mobDef.baseDamage + (m.level - 1) * gameConfig.combat.mobDamagePerLevel; // Simple scaling
+              const baseDamage = mobDef ? mobDef.baseDamage : 5;
+              const dmg = baseDamage + (m.level - 1) * gameConfig.combat.mobDamagePerLevel;
 
-              p.health = Math.max(0, p.health - dmg);
-              this.combatEvents.push({
-                id: this.generateId('evt'),
-                type: 'damage',
-                targetId: 'player',
-                value: dmg,
-                x: p.x,
-                z: p.z
-              });
+              if (attackRange > 1.5) {
+                this.projectiles.push({
+                  id: this.generateId('proj'),
+                  x: m.x,
+                  z: m.z,
+                  targetId: 'player',
+                  speed: PROJECTILE_SPEED,
+                  damage: dmg,
+                  spellType: 'frostbolt'
+                });
+                this.soundEvents.push('cast_frostbolt');
+              } else {
+                p.health = Math.max(0, p.health - dmg);
+                this.soundEvents.push('player_damaged');
+                this.combatEvents.push({
+                  id: this.generateId('evt'),
+                  type: 'damage',
+                  targetId: 'player',
+                  value: dmg,
+                  x: p.x,
+                  z: p.z
+                });
+              }
               m.attackCooldown = gameConfig.combat.mobAttackCooldown;
             }
           }
@@ -693,6 +747,7 @@ export class Sim {
     const item = lc.items[itemIdx];
 
     // Add to player inventory
+    this.soundEvents.push('loot_pickup');
     const invItem = this.player.inventory.find(i => i.itemId === item.itemId);
     if (invItem) {
       invItem.count += item.count;
@@ -721,6 +776,7 @@ export class Sim {
     if (lc.money <= 0) return;
 
     this.player.money += lc.money;
+    this.soundEvents.push('loot_pickup');
     lc.money = 0;
 
     // Clean up empty container
@@ -740,6 +796,9 @@ export class Sim {
     if (!lc) return;
 
     // Loot gold
+    if (lc.money > 0 || lc.items.length > 0) {
+      this.soundEvents.push('loot_pickup');
+    }
     if (lc.money > 0) {
       this.player.money += lc.money;
       lc.money = 0;
@@ -797,6 +856,7 @@ export class Sim {
 
     // Deduct money
     this.player.money -= cost;
+    this.soundEvents.push('buy_item');
     return true;
   }
 
@@ -828,6 +888,7 @@ export class Sim {
     } else {
       this.player.inventory.splice(itemIdx, 1);
     }
+    this.soundEvents.push('sell_item');
     return true;
   }
 
@@ -907,6 +968,7 @@ export class Sim {
     }
 
     this.recalculateStats();
+    this.soundEvents.push('equip_item');
     return true;
   }
 
@@ -931,6 +993,7 @@ export class Sim {
     }
 
     this.recalculateStats();
+    this.soundEvents.push('unequip_item');
     return true;
   }
 
@@ -964,6 +1027,7 @@ export class Sim {
         p.inventory.splice(itemIdx, 1);
       }
       this.recalculateStats();
+      this.soundEvents.push('use_potion');
       return true;
     }
 
@@ -984,6 +1048,7 @@ export class Sim {
         : 0,
       completed: false
     });
+    this.soundEvents.push('quest_accept');
     return true;
   }
 
@@ -1020,6 +1085,7 @@ export class Sim {
 
     // Mark completed
     q.completed = true;
+    this.soundEvents.push('quest_complete');
 
     // Award rewards
     if (qDef.rewards.money > 0) {

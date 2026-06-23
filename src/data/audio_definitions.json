@@ -1,0 +1,18 @@
+{
+  "cast_fireball": "sounds/cast_fireball.mp3",
+  "cast_frostbolt": "sounds/cast_frostbolt.mp3",
+  "projectile_hit": "sounds/projectile_hit.mp3",
+  "player_damaged": "sounds/player_damaged.mp3",
+  "mob_death": "sounds/mob_death.mp3",
+  "level_up": "sounds/level_up.mp3",
+  "quest_accept": "sounds/quest_accept.mp3",
+  "quest_complete": "sounds/quest_complete.mp3",
+  "loot_pickup": "sounds/loot_pickup.mp3",
+  "use_potion": "sounds/use_potion.mp3",
+  "equip_item": "sounds/equip_item.mp3",
+  "unequip_item": "sounds/unequip_item.mp3",
+  "buy_item": "sounds/buy_item.mp3",
+  "sell_item": "sounds/sell_item.mp3",
+  "music_starter_zone": "sounds/music_town.mp3",
+  "music_scorching_desert": "sounds/music_desert.mp3"
+}

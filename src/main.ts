@@ -4,6 +4,7 @@ import { Renderer } from './render/renderer';
 import { Sim, isValidZoneKey } from './sim/sim';
 import { listenInput, getInput } from './game/input';
 import { saveGame, loadGame, applyLoadedSave } from './game/save';
+import { playAudioEvent, playZoneMusic } from './game/audio';
 
 const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
 
@@ -22,6 +23,7 @@ if (loadedSave) {
   sim = new Sim(currentZoneKey);
 }
 renderer = new Renderer(canvas, sim);
+playZoneMusic(currentZoneKey);
 
 listenInput(canvas);
 
@@ -36,6 +38,7 @@ function switchZone(zoneKey: string, spawnX: number, spawnZ: number): void {
   currentZoneKey = zoneKey;
 
   renderer = new Renderer(canvas, sim);
+  playZoneMusic(zoneKey);
 }
 
 // Listen for portal selection from the UI
@@ -70,6 +73,7 @@ function loop(now: number): void {
         sim = new Sim(currentZoneKey);
         applyLoadedSave(sim.player, loaded);
         renderer = new Renderer(canvas, sim);
+        playZoneMusic(currentZoneKey);
         renderer.showMessage('✔  Game Loaded', 2000, '#60a5fa');
       }
     } else {
@@ -78,6 +82,9 @@ function loop(now: number): void {
   }
 
   sim.tick(dt, input);
+  for (const soundEvt of sim.soundEvents) {
+    playAudioEvent(soundEvt);
+  }
   renderer.render(dt, sim, input);
 
   requestAnimationFrame(loop);

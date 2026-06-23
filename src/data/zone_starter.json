@@ -27,6 +27,8 @@
     { "url": "models/props/barrel.glb", "x": -60, "z": -55, "rotY": 0.1, "scale": 1.0 },
 
     { "url": "models/props/bonfire.glb", "x": 72, "z": -72, "rotY": 0.0, "scale": 1.0 },
+    { "url": "models/props/bonfire.glb", "x": -40, "z": 40, "rotY": 0.0, "scale": 1.0 },
+    { "url": "models/props/tent_small.glb", "x": -40, "z": 44, "rotY": 0.0, "scale": 1.0 },
     { "url": "models/props/tent_small.glb", "x": 70, "z": -76, "rotY": 0.7853981633974483, "scale": 1.0 },
     { "url": "models/props/tent_small.glb", "x": 76, "z": -70, "rotY": -0.7853981633974483, "scale": 1.0 },
     { "url": "models/props/barrel.glb", "x": 74, "z": -74, "rotY": 0.0, "scale": 1.0 },
@@ -95,6 +97,16 @@
         { "x": 72, "z": -72, "health": 50, "maxHealth": 50 },
         { "x": 75, "z": -75, "health": 50, "maxHealth": 50 },
         { "x": 69, "z": -69, "health": 50, "maxHealth": 50 }
+      ]
+    },
+    {
+      "mobType": "skeleton_mage",
+      "minLevel": 2,
+      "maxLevel": 4,
+      "spawns": [
+        { "x": -40, "z": 37, "health": 50, "maxHealth": 50 },
+        { "x": -37, "z": 41, "health": 50, "maxHealth": 50 },
+        { "x": -43, "z": 41, "health": 50, "maxHealth": 50 }
       ]
     }
   ],

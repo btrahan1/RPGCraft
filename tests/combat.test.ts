@@ -23,8 +23,8 @@ describe('Combat and Spellcasting Simulation', () => {
   it('should start casting a spell and cancel it if player moves', () => {
     const sim = new Sim();
     
-    // Initial state: 9 mobs from starter zone
-    expect(sim.mobs.length).toBe(9);
+    // Initial state: 12 mobs from starter zone
+    expect(sim.mobs.length).toBe(12);
     const target = sim.mobs[0];
     target.x = 3;
     target.z = 3;

@@ -68,6 +68,7 @@ export interface MobDefinition {
   /** Animation clip names for this rig. */
   clips: { idle: string; walk: string; run: string };
   lootTable: LootTableDef;
+  attackRange?: number;
 }
 
 export const MOB_REGISTRY: Record<string, MobDefinition> = mobDefinitionsData;
