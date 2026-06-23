@@ -524,6 +524,47 @@ export class Hud {
     }
   }
 
+  /** Update floating nameplates above buildings. */
+  updateBuildings(
+    buildings: any[],
+    camera: THREE.Camera,
+    rendEl: HTMLElement,
+  ): void {
+    const activeBuildingIds = new Set(buildings.map((_, i) => `building_${i}`));
+    for (const [id, el] of this.entityUIs) {
+      if (id.startsWith('building_') && !activeBuildingIds.has(id)) {
+        el.remove();
+        this.entityUIs.delete(id);
+      }
+    }
+
+    for (let i = 0; i < buildings.length; i++) {
+      const b = buildings[i];
+      if (!b.label) continue;
+
+      const id = `building_${i}`;
+      let el = this.entityUIs.get(id);
+      if (!el) {
+        el = document.createElement('div');
+        el.className = 'floating-ui-bar';
+        el.innerHTML = `<div class="name-label" style="color:#ffd700; font-size:10px; font-weight:bold; letter-spacing:0.5px; text-shadow:1px 1px 1px #000">${b.label}</div>`;
+        this.uiContainer.appendChild(el);
+        this.entityUIs.set(id, el);
+      }
+
+      const height = b.labelHeight || 5.0;
+      this.proj.set(b.x, height, b.z);
+      this.proj.project(camera);
+      if (this.proj.z > 1) {
+        el.style.display = 'none';
+      } else {
+        const sx = (this.proj.x * 0.5 + 0.5) * rendEl.clientWidth;
+        const sy = (-(this.proj.y * 0.5) + 0.5) * rendEl.clientHeight;
+        el.style.cssText = `left:${sx}px;top:${sy}px;display:flex; border-color: rgba(184,134,11,0.3); background: rgba(10,10,20,0.7); padding: 3px 6px; width: auto; transform: translate(-50%, -100%)`;
+      }
+    }
+  }
+
   /** Show or hide the cast-bar with current progress. */
   updateCastBar(activeCast: SpellCast | null): void {
     if (activeCast) {

@@ -6,6 +6,8 @@ export interface StaticBuilding {
   z: number;
   rotY: number;
   scale: number;
+  label?: string;
+  labelHeight?: number;
 }
 
 export interface StaticProp {

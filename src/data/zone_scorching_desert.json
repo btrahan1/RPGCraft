@@ -6,10 +6,10 @@
     "depth": 24
   },
   "buildings": [
-    { "url": "models/props/inn.glb", "x": 200, "z": 192, "rotY": 1.5707963267948966, "scale": 1.1 },
-    { "url": "models/props/blacksmith.glb", "x": 212, "z": 200, "rotY": 0.0, "scale": 1.1 },
-    { "url": "models/props/tent_open.glb", "x": 196, "z": 212, "rotY": 3.141592653589793, "scale": 1.0 },
-    { "url": "models/props/tent_small.glb", "x": 204, "z": 212, "rotY": 3.141592653589793, "scale": 1.0 }
+    { "url": "models/props/inn.glb", "x": 200, "z": 192, "rotY": 1.5707963267948966, "scale": 1.1, "label": "Oasis Tavern", "labelHeight": 5.0 },
+    { "url": "models/props/blacksmith.glb", "x": 212, "z": 200, "rotY": 0.0, "scale": 1.1, "label": "Desert Forge", "labelHeight": 5.0 },
+    { "url": "models/props/tent_open.glb", "x": 196, "z": 212, "rotY": 3.141592653589793, "scale": 1.0, "label": "Merchant Tent", "labelHeight": 3.0 },
+    { "url": "models/props/tent_small.glb", "x": 204, "z": 212, "rotY": 3.141592653589793, "scale": 1.0, "label": "Rest Tent", "labelHeight": 2.5 }
   ],
   "props": [
     { "url": "models/props/well.glb", "x": 200, "z": 194, "rotY": 0.0, "scale": 1.0 },

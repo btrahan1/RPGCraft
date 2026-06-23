@@ -322,6 +322,7 @@ export class Renderer {
 
     this.hud.updatePlayer(p, this.playerVisual.height, this.camera, rendEl);
     this.hud.updateMobs(sim.mobs, this.mobVisuals, this.camera, rendEl);
+    this.hud.updateBuildings(sim.zone.buildings, this.camera, rendEl);
     this.hud.updateCastBar(p.activeCast);
     this.hud.updateActionSlots(p, activeTarget !== null);
     this.hud.updateDamageNumbers(sim.combatEvents, dt, this.camera, rendEl);

@@ -6,11 +6,11 @@
     "depth": 28
   },
   "buildings": [
-    { "url": "models/props/inn.glb", "x": -12, "z": -8, "rotY": 1.5707963267948966, "scale": 1.2 },
-    { "url": "models/props/blacksmith.glb", "x": 12, "z": -8, "rotY": -1.5707963267948966, "scale": 1.2 },
-    { "url": "models/props/house_1.glb", "x": -8, "z": 12, "rotY": 3.141592653589793, "scale": 1.2 },
-    { "url": "models/props/house_2.glb", "x": 8, "z": 12, "rotY": 3.141592653589793, "scale": 1.2 },
-    { "url": "models/props/house_3.glb", "x": 0, "z": 18, "rotY": 3.141592653589793, "scale": 1.2 }
+    { "url": "models/props/inn.glb", "x": -12, "z": -8, "rotY": 1.5707963267948966, "scale": 1.2, "label": "The Gilded Keg Inn", "labelHeight": 5.2 },
+    { "url": "models/props/blacksmith.glb", "x": 12, "z": -8, "rotY": -1.5707963267948966, "scale": 1.2, "label": "Ironheart Blacksmith", "labelHeight": 5.2 },
+    { "url": "models/props/house_1.glb", "x": -8, "z": 12, "rotY": 3.141592653589793, "scale": 1.2, "label": "Town House", "labelHeight": 4.5 },
+    { "url": "models/props/house_2.glb", "x": 8, "z": 12, "rotY": 3.141592653589793, "scale": 1.2, "label": "Town House", "labelHeight": 4.5 },
+    { "url": "models/props/house_3.glb", "x": 0, "z": 18, "rotY": 3.141592653589793, "scale": 1.2, "label": "Town House", "labelHeight": 4.5 }
   ],
   "props": [
     { "url": "models/props/well.glb", "x": 0, "z": -6, "rotY": 0.0, "scale": 1.0 },
