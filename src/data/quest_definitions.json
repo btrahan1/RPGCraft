@@ -1,0 +1,30 @@
+{
+  "kill_orcs_quest": {
+    "id": "kill_orcs_quest",
+    "title": "Defend the Outpost",
+    "description": "Defeat 3 Orcs in the starter zone to help protect the camp.",
+    "type": "kill",
+    "targetType": "orc",
+    "targetCount": 3,
+    "rewards": {
+      "experience": 120,
+      "money": 500,
+      "items": []
+    }
+  },
+  "collect_pelts_quest": {
+    "id": "collect_pelts_quest",
+    "title": "Fur Trade",
+    "description": "Collect 3 Wolf Pelts and bring them to Blacksmith Grimur.",
+    "type": "collect",
+    "targetType": "wolf_pelt",
+    "targetCount": 3,
+    "rewards": {
+      "experience": 150,
+      "money": 800,
+      "items": [
+        { "itemId": "healing_potion", "count": 1 }
+      ]
+    }
+  }
+}

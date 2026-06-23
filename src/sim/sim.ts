@@ -9,6 +9,7 @@ import scorchingDesert from '../data/zone_scorching_desert.json';
 import gameConfig from '../data/game_config.json';
 import spellDefinitions from '../data/spell_definitions.json';
 import itemDefinitions from '../data/item_definitions.json';
+import questDefinitions from '../data/quest_definitions.json';
 
 // ── Zone Registry ────────────────────────────────────────────────────────
 const ZONE_REGISTRY: Record<string, ZoneData> = {
@@ -74,6 +75,12 @@ export interface PlayerEquipment {
   ring: string | null;
 }
 
+export interface PlayerQuest {
+  questId: string;
+  progress: number;
+  completed: boolean;
+}
+
 export interface Player {
   id: string;
   x: number;
@@ -98,6 +105,7 @@ export interface Player {
   baseMaxMana: number;
   spellPower: number;
   equipment: PlayerEquipment;
+  quests: PlayerQuest[];
 }
 
 export interface Mob {
@@ -186,7 +194,8 @@ export class Sim {
       shield: null,
       chest: null,
       ring: null
-    }
+    },
+    quests: []
   };
   readonly zone: ZoneData;
   readonly mobs: Mob[] = [];
@@ -234,6 +243,7 @@ export class Sim {
     p.baseMaxMana = from.player.baseMaxMana;
     p.spellPower = from.player.spellPower;
     p.equipment = { ...from.player.equipment };
+    p.quests = from.player.quests.map(q => ({ ...q }));
     // Place player at the spawn coordinates
     p.x = spawnX;
     p.z = spawnZ;
@@ -506,6 +516,18 @@ export class Sim {
           const xpGained = getMobXpValue(target.level);
           this.grantXp(xpGained);
           this.spawnLoot(target.type, target.x, target.z);
+
+          // Update kill quest progress
+          for (const q of p.quests) {
+            if (q.completed) continue;
+            const qDef = (questDefinitions as any)[q.questId];
+            if (qDef && qDef.type === 'kill' && qDef.targetType === target.type) {
+              if (q.progress < qDef.targetCount) {
+                q.progress = Math.min(qDef.targetCount, q.progress + 1);
+              }
+            }
+          }
+
           this.combatEvents.push({
             id: this.generateId('evt'),
             type: 'damage',
@@ -838,6 +860,18 @@ export class Sim {
     if (p.maxMana !== prevMaxM) {
       p.mana = Math.min(p.maxMana, Math.max(0, p.mana + (p.maxMana - prevMaxM)));
     }
+
+    // Sync collect quest progress
+    if (p.quests) {
+      for (const q of p.quests) {
+        if (q.completed) continue;
+        const qDef = (questDefinitions as any)[q.questId];
+        if (qDef && qDef.type === 'collect') {
+          const item = p.inventory.find(i => i.itemId === qDef.targetType);
+          q.progress = item ? item.count : 0;
+        }
+      }
+    }
   }
 
   equipItem(itemIdx: number): boolean {
@@ -934,5 +968,78 @@ export class Sim {
     }
 
     return false;
+  }
+
+  acceptQuest(questId: string): boolean {
+    const p = this.player;
+    if (p.quests.some(q => q.questId === questId)) return false;
+
+    const qDef = (questDefinitions as any)[questId];
+    if (!qDef) return false;
+
+    p.quests.push({
+      questId,
+      progress: qDef.type === 'collect'
+        ? (p.inventory.find(i => i.itemId === qDef.targetType)?.count ?? 0)
+        : 0,
+      completed: false
+    });
+    return true;
+  }
+
+  completeQuest(npcId: string, questId: string): boolean {
+    const p = this.player;
+    const q = p.quests.find(q => q.questId === questId);
+    if (!q || q.completed) return false;
+
+    const qDef = (questDefinitions as any)[questId];
+    if (!qDef) return false;
+
+    // Proximity check to turn-in NPC
+    const npc = this.zone.npcs.find(n => n.id === npcId);
+    if (!npc || !npc.turnInQuests || !npc.turnInQuests.includes(questId)) return false;
+    const dx = npc.x - p.x;
+    const dz = npc.z - p.z;
+    if (dx * dx + dz * dz > 3.5 * 3.5) return false;
+
+    // Check completion
+    if (qDef.type === 'kill') {
+      if (q.progress < qDef.targetCount) return false;
+    } else if (qDef.type === 'collect') {
+      const item = p.inventory.find(i => i.itemId === qDef.targetType);
+      if (!item || item.count < qDef.targetCount) return false;
+
+      // Deduct items
+      if (item.count > qDef.targetCount) {
+        item.count -= qDef.targetCount;
+      } else {
+        const idx = p.inventory.indexOf(item);
+        p.inventory.splice(idx, 1);
+      }
+    }
+
+    // Mark completed
+    q.completed = true;
+
+    // Award rewards
+    if (qDef.rewards.money > 0) {
+      p.money += qDef.rewards.money;
+    }
+    if (qDef.rewards.experience > 0) {
+      this.grantXp(qDef.rewards.experience);
+    }
+    if (qDef.rewards.items) {
+      for (const rewardItem of qDef.rewards.items) {
+        const existing = p.inventory.find(i => i.itemId === rewardItem.itemId);
+        if (existing) {
+          existing.count += rewardItem.count;
+        } else {
+          p.inventory.push({ ...rewardItem });
+        }
+      }
+    }
+
+    this.recalculateStats();
+    return true;
   }
 }

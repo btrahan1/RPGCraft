@@ -9,6 +9,7 @@ import type { PortalDef } from '../sim/world';
 import type { CharacterVisual } from './character';
 import spellDefinitions from '../data/spell_definitions.json';
 import itemDefinitions from '../data/item_definitions.json';
+import questDefinitions from '../data/quest_definitions.json';
 
 interface DamageNumber {
   el: HTMLDivElement;
@@ -61,6 +62,7 @@ export class Hud {
   private sim: any = null;
   private lastInventoryState = '';
   private lastCharacterState = '';
+  private questLogEl!: HTMLDivElement;
 
   /** Reused across projection calls to avoid per-frame allocation. */
   private readonly proj = new THREE.Vector3();
@@ -79,6 +81,7 @@ export class Hud {
     this.buildNpcUI();
     this.buildShopUI();
     this.buildCharacterUI();
+    this.buildQuestLog();
     this.buildHudMessage();
 
     // Close panels on Escape, toggle panels via hotkeys
@@ -258,6 +261,11 @@ export class Hud {
       '.char-stat-row{display:flex;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.05);padding:2px 0}',
       '.char-stat-val{font-weight:bold;font-family:monospace}',
       '.char-stat-bonus{color:#22c55e;margin-left:4px}',
+      '.quest-log{position:absolute;top:100px;right:16px;background:rgba(10,10,20,0.85);border:2px solid #8b5cf6;border-radius:8px;padding:10px 14px;min-width:200px;box-shadow:0 6px 15px rgba(0,0,0,0.8);pointer-events:none;font-family:sans-serif;z-index:10;color:#fff}',
+      '.quest-log-title{font-size:12px;font-weight:bold;color:#c4b5fd;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid rgba(139,92,246,0.3);padding-bottom:3px}',
+      '.quest-log-entry{font-size:11px;margin-bottom:4px;line-height:1.3}',
+      '.quest-log-progress{color:#facc15;font-weight:bold;font-family:monospace}',
+      '.quest-log-done{color:#22c55e;font-weight:bold}',
     ].join('');
     document.head.appendChild(s);
   }
@@ -506,6 +514,7 @@ export class Hud {
     this.sim = sim;
     const p = sim.player;
     this.updateInventoryUI(p);
+    this.updateQuestLog(p);
     if (this._characterVisible) {
       this.updateCharacterUI(p);
     }
@@ -841,11 +850,56 @@ export class Hud {
     let html = `<div class="dialogue-title">${npc.name}</div>`;
     html += `<div class="dialogue-subtitle">${npc.title}</div>`;
     html += `<div class="dialogue-text">${pageText}</div>`;
-    
+
+    // Add active quest progress below dialogue text
+    if (isLastPage && this.sim) {
+      const p = this.sim.player;
+      if (npc.turnInQuests) {
+        npc.turnInQuests.forEach((questId: string) => {
+          const q = p.quests.find((x: any) => x.questId === questId);
+          if (q && !q.completed) {
+            const qDef = (questDefinitions as any)[questId];
+            if (qDef && q.progress < qDef.targetCount) {
+              let prog = qDef.type === 'kill' ? `${q.progress}/${qDef.targetCount} slain` : `${q.progress}/${qDef.targetCount} gathered`;
+              html += `<div style="font-size:11px; color:#facc15; margin-bottom:10px; font-weight:bold; font-family:sans-serif">Objective: ${qDef.title} (${prog})</div>`;
+            }
+          }
+        });
+      }
+    }
+
     html += `<div class="dialogue-footer">`;
     if (npc.shop) {
       html += `<button class="dialogue-btn shop-trade-btn" style="background:#ffd700; color:#000; margin-right:auto">Trade</button>`;
     }
+
+    // Quest buttons
+    if (isLastPage && this.sim) {
+      const p = this.sim.player;
+      if (npc.turnInQuests) {
+        npc.turnInQuests.forEach((questId: string) => {
+          const q = p.quests.find((x: any) => x.questId === questId);
+          if (q && !q.completed) {
+            const qDef = (questDefinitions as any)[questId];
+            if (qDef && q.progress >= qDef.targetCount) {
+              html += `<button class="dialogue-btn complete-quest-btn" data-quest="${questId}" style="background:#8b5cf6; color:#fff; margin-right:8px">Complete: ${qDef.title}</button>`;
+            }
+          }
+        });
+      }
+      if (npc.offeredQuests) {
+        npc.offeredQuests.forEach((questId: string) => {
+          const hasQuest = p.quests.some((x: any) => x.questId === questId);
+          if (!hasQuest) {
+            const qDef = (questDefinitions as any)[questId];
+            if (qDef) {
+              html += `<button class="dialogue-btn accept-quest-btn" data-quest="${questId}" style="background:#8b5cf6; color:#fff; margin-right:8px">Accept: ${qDef.title}</button>`;
+            }
+          }
+        });
+      }
+    }
+
     html += `<button class="dialogue-btn dialogue-next-btn">${isLastPage ? 'Close (Esc)' : 'Next'}</button>`;
     html += `</div>`;
 
@@ -870,6 +924,38 @@ export class Hud {
         this.showShop(npc, this.sim);
       });
     }
+
+    // Hook accept quest buttons
+    const acceptBtns = this.dialogueContainerEl.querySelectorAll('.accept-quest-btn');
+    acceptBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const questId = (btn as HTMLElement).dataset.quest ?? '';
+        if (questId && this.sim) {
+          const success = this.sim.acceptQuest(questId);
+          if (success) {
+            this.showMessage(`Accepted Quest: ${(questDefinitions as any)[questId]?.title}`, 2000, '#8b5cf6');
+            this.renderDialogue();
+            this.updateQuestLog(this.sim.player);
+          }
+        }
+      });
+    });
+
+    // Hook complete quest buttons
+    const completeBtns = this.dialogueContainerEl.querySelectorAll('.complete-quest-btn');
+    completeBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const questId = (btn as HTMLElement).dataset.quest ?? '';
+        if (questId && this.sim) {
+          const success = this.sim.completeQuest(npc.id, questId);
+          if (success) {
+            this.showMessage(`Completed Quest: ${(questDefinitions as any)[questId]?.title}`, 2500, '#22c55e');
+            this.renderDialogue();
+            this.updateQuestLog(this.sim.player);
+          }
+        }
+      });
+    });
   }
 
   closeDialogue(): void {
@@ -1317,14 +1403,27 @@ export class Hud {
       if (!v) continue;
 
       let el = this.entityUIs.get(npc.id);
+      const qi = this.sim ? getNpcQuestIndicator(npc, this.sim.player) : null;
+      const qiKey = qi ? `${qi.text}_${qi.color}` : 'none';
+      const qiHtml = qi ? `<span style="color:${qi.color}; font-weight:bold; font-size:16px; margin-right:4px; text-shadow:1px 1px 2px #000; font-family:sans-serif">${qi.text}</span>` : '';
+
       if (!el) {
         el = document.createElement('div');
         el.className = 'floating-ui-bar';
-        el.innerHTML =
-          `<div class="name-label" style="color:#22c55e">${npc.name}</div>` +
-          `<div class="name-label" style="font-size:7px; color:rgba(255,255,255,0.5); font-weight:normal; margin-top:-1px">&lt;${npc.title}&gt;</div>`;
         this.uiContainer.appendChild(el);
         this.entityUIs.set(npc.id, el);
+      }
+
+      if (el.dataset.qiKey !== qiKey) {
+        el.dataset.qiKey = qiKey;
+        el.innerHTML =
+          `<div style="display:flex; align-items:center; justify-content:center; gap:3px">` +
+          qiHtml +
+          `<div style="text-align:center">` +
+          `<div class="name-label" style="color:#22c55e; line-height:1.1">${npc.name}</div>` +
+          `<div class="name-label" style="font-size:7px; color:rgba(255,255,255,0.5); font-weight:normal; margin-top:1px">&lt;${npc.title}&gt;</div>` +
+          `</div>` +
+          `</div>`;
       }
 
       this.proj.set(npc.x, 2.4, npc.z);
@@ -1337,6 +1436,40 @@ export class Hud {
         el.style.cssText = `left:${sx}px;top:${sy}px;display:flex; border-color: rgba(34,197,94,0.4); background: rgba(10,10,20,0.85); padding: 3px 6px; width: auto; transform: translate(-50%, -100%)`;
       }
     }
+  }
+
+  private buildQuestLog(): void {
+    this.questLogEl = document.createElement('div');
+    this.questLogEl.className = 'quest-log';
+    this.questLogEl.style.display = 'none';
+    this.uiContainer.appendChild(this.questLogEl);
+  }
+
+  private updateQuestLog(player: Player): void {
+    const activeQuests = player.quests.filter(q => !q.completed);
+    if (activeQuests.length === 0) {
+      this.questLogEl.style.display = 'none';
+      return;
+    }
+
+    this.questLogEl.style.display = 'block';
+    let html = '<div class="quest-log-title">Active Quests</div>';
+    activeQuests.forEach(q => {
+      const qDef = (questDefinitions as any)[q.questId];
+      if (qDef) {
+        let progressText = '';
+        if (qDef.type === 'kill') {
+          progressText = `<span class="quest-log-progress">${q.progress}/${qDef.targetCount}</span> slain`;
+        } else if (qDef.type === 'collect') {
+          progressText = `<span class="quest-log-progress">${q.progress}/${qDef.targetCount}</span> gathered`;
+        }
+
+        const isDone = q.progress >= qDef.targetCount;
+        const statusStr = isDone ? '<span class="quest-log-done"> (Ready)</span>' : ` - ${progressText}`;
+        html += `<div class="quest-log-entry"><strong>${qDef.title}</strong>${statusStr}</div>`;
+      }
+    });
+    this.questLogEl.innerHTML = html;
   }
 }
 
@@ -1373,4 +1506,43 @@ function getItemDef(itemId: string): {
   restoreMana?: number;
 } | null {
   return (itemDefinitions as any)[itemId] || null;
+}
+
+function getNpcQuestIndicator(npc: any, player: Player): { text: string; color: string } | null {
+  if (!player || !player.quests) return null;
+
+  // 1. Ready for Turn In "?"
+  if (npc.turnInQuests) {
+    for (const questId of npc.turnInQuests) {
+      const q = player.quests.find(x => x.questId === questId);
+      if (q && !q.completed) {
+        const qDef = (questDefinitions as any)[questId];
+        if (qDef && q.progress >= qDef.targetCount) {
+          return { text: '?', color: '#facc15' };
+        }
+      }
+    }
+  }
+
+  // 2. Offered "!"
+  if (npc.offeredQuests) {
+    for (const questId of npc.offeredQuests) {
+      const hasQuest = player.quests.some(x => x.questId === questId);
+      if (!hasQuest) {
+        return { text: '!', color: '#facc15' };
+      }
+    }
+  }
+
+  // 3. Active progress "?"
+  if (npc.turnInQuests) {
+    for (const questId of npc.turnInQuests) {
+      const q = player.quests.find(x => x.questId === questId);
+      if (q && !q.completed) {
+        return { text: '?', color: '#9ca3af' };
+      }
+    }
+  }
+
+  return null;
 }

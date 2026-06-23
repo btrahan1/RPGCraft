@@ -110,6 +110,8 @@ export interface NpcDef {
   rotY: number;
   dialogue: string[];
   shop?: ShopDef;
+  offeredQuests?: string[];
+  turnInQuests?: string[];
 }
 
 export interface ZoneData {

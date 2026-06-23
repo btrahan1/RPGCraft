@@ -26,6 +26,11 @@ export interface SaveGame {
     chest: string | null;
     ring: string | null;
   };
+  quests?: {
+    questId: string;
+    progress: number;
+    completed: boolean;
+  }[];
 }
 
 const SAVE_KEY = 'rpgcraft-savegame';
@@ -57,6 +62,7 @@ export function saveGame(sim: Sim, currentZoneKey: string): void {
     baseMaxMana: p.baseMaxMana,
     spellPower: p.spellPower,
     equipment: p.equipment,
+    quests: p.quests,
   };
 
   try {
@@ -109,4 +115,5 @@ export function applyLoadedSave(p: Sim['player'], s: SaveGame): void {
   p.baseMaxMana  = s.baseMaxMana      ?? 100;
   p.spellPower   = s.spellPower       ?? 15;
   p.equipment    = s.equipment        ?? { weapon: null, shield: null, chest: null, ring: null };
+  p.quests       = s.quests           ?? [];
 }
