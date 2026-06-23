@@ -25,35 +25,57 @@
     "rarity": "uncommon",
     "desc": "Restores health on use.",
     "icon": "icon-potion",
-    "value": 200
+    "value": 200,
+    "usable": true,
+    "restoreHealth": 50
   },
   "mana_potion": {
     "name": "Mana Potion",
     "rarity": "uncommon",
     "desc": "Restores mana on use.",
     "icon": "icon-potion-blue",
-    "value": 200
+    "value": 200,
+    "usable": true,
+    "restoreMana": 50
   },
   "iron_sword": {
     "name": "Iron Sword",
     "rarity": "common",
     "desc": "A sturdy iron blade.",
     "icon": "icon-sword",
-    "value": 1500
+    "value": 1500,
+    "slot": "weapon",
+    "spellDamageBonus": 8,
+    "modelUrl": "models/weapons/sword_1handed.glb"
   },
   "sturdy_shield": {
     "name": "Sturdy Shield",
     "rarity": "common",
     "desc": "Protects against incoming blows.",
     "icon": "icon-shield",
-    "value": 1200
+    "value": 1200,
+    "slot": "shield",
+    "healthBonus": 100,
+    "modelUrl": "models/weapons/shield_square.glb"
+  },
+  "apprentice_robe": {
+    "name": "Apprentice Robe",
+    "rarity": "uncommon",
+    "desc": "A simple robe woven with mana threads.",
+    "icon": "icon-robe",
+    "value": 800,
+    "slot": "chest",
+    "healthBonus": 50,
+    "manaBonus": 30
   },
   "bronze_ring": {
     "name": "Bronze Ring",
     "rarity": "rare",
     "desc": "A simple ring. Smells like copper.",
     "icon": "icon-ring",
-    "value": 1000
+    "value": 1000,
+    "slot": "ring",
+    "manaBonus": 40
   },
   "desert_sand": {
     "name": "Desert Sand",

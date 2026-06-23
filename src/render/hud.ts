@@ -4,7 +4,7 @@
 // Reads sim state; never writes it.
 
 import * as THREE from 'three';
-import type { Player, Mob, SpellCast, CombatEvent } from '../sim/sim';
+import type { Player, Mob, SpellCast, CombatEvent, PlayerEquipment } from '../sim/sim';
 import type { PortalDef } from '../sim/world';
 import type { CharacterVisual } from './character';
 import spellDefinitions from '../data/spell_definitions.json';
@@ -56,7 +56,11 @@ export class Hud {
   private shopPanel!: HTMLDivElement;
   private _shopVisible = false;
   private activeShopNpc: any = null;
+  private characterPanel!: HTMLDivElement;
+  private _characterVisible = false;
   private sim: any = null;
+  private lastInventoryState = '';
+  private lastCharacterState = '';
 
   /** Reused across projection calls to avoid per-frame allocation. */
   private readonly proj = new THREE.Vector3();
@@ -74,9 +78,10 @@ export class Hud {
     this.buildInventoryUI();
     this.buildNpcUI();
     this.buildShopUI();
+    this.buildCharacterUI();
     this.buildHudMessage();
 
-    // Close panels on Escape, toggle inventory on B/I
+    // Close panels on Escape, toggle panels via hotkeys
     this.keyDownBound = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         let handeld = false;
@@ -97,6 +102,10 @@ export class Hud {
           this.closeShop();
           handeld = true;
         }
+        if (this._characterVisible) {
+          this.closeCharacter();
+          handeld = true;
+        }
         if (this._inventoryVisible) {
           this.closeInventory();
           handeld = true;
@@ -106,6 +115,12 @@ export class Hud {
         // Toggle inventory
         if (!this._portalListVisible && !this._lootVisible && !this._shopVisible) {
           this.toggleInventory();
+          e.preventDefault();
+        }
+      } else if (e.code === 'KeyC' || e.key === 'c' || e.key === 'C') {
+        // Toggle character sheet
+        if (!this._portalListVisible && !this._lootVisible && !this._shopVisible) {
+          this.toggleCharacter();
           e.preventDefault();
         }
       }
@@ -204,15 +219,16 @@ export class Hud {
       '.inventory-slot.empty{border:1px dashed rgba(255,255,255,0.15);cursor:default}',
       '.inventory-slot .slot-count{position:absolute;bottom:2px;right:4px;font-size:10px;color:#fff;text-shadow:1px 1px 1px #000;font-family:monospace;font-weight:bold}',
       '.inventory-money{display:flex;align-items:center;justify-content:flex-end;gap:6px;font-size:11px;font-weight:bold;color:#e5e7eb}',
-      '.inventory-slot .icon-tooth{width:26px;height:26px;background:radial-gradient(circle,#fff,#d1d5db);border-radius:50%}',
-      '.inventory-slot .icon-pelt{width:26px;height:26px;background:radial-gradient(circle,#b45309,#78350f);border-radius:20%}',
-      '.inventory-slot .icon-ear{width:26px;height:26px;background:radial-gradient(circle,#86efac,#15803d);border-radius:40%}',
-      '.inventory-slot .icon-potion{width:26px;height:26px;background:radial-gradient(circle,#f87171,#b91c1c);border-radius:50%}',
-      '.inventory-slot .icon-potion-blue{width:26px;height:26px;background:radial-gradient(circle,#60a5fa,#1d4ed8);border-radius:50%}',
-      '.inventory-slot .icon-sword{width:26px;height:26px;background:radial-gradient(circle,#cbd5e1,#475569);border-radius:4px}',
-      '.inventory-slot .icon-shield{width:26px;height:26px;background:radial-gradient(circle,#fbbf24,#b45309);clip-path:polygon(50% 0%, 100% 25%, 80% 80%, 50% 100%, 20% 80%, 0% 25%)}',
-      '.inventory-slot .icon-ring{width:26px;height:26px;background:radial-gradient(circle,#facc15,#ca8a04);border-radius:50%;border:2px solid #78350f}',
-      '.inventory-slot .icon-sand{width:26px;height:26px;background:radial-gradient(circle,#fef08a,#eab308);border-radius:10%}',
+      '.icon-tooth{width:26px;height:26px;background:radial-gradient(circle,#fff,#d1d5db);border-radius:50%}',
+      '.icon-pelt{width:26px;height:26px;background:radial-gradient(circle,#b45309,#78350f);border-radius:20%}',
+      '.icon-ear{width:26px;height:26px;background:radial-gradient(circle,#86efac,#15803d);border-radius:40%}',
+      '.icon-potion{width:26px;height:26px;background:radial-gradient(circle,#f87171,#b91c1c);border-radius:50%}',
+      '.icon-potion-blue{width:26px;height:26px;background:radial-gradient(circle,#60a5fa,#1d4ed8);border-radius:50%}',
+      '.icon-sword{width:26px;height:26px;background:radial-gradient(circle,#cbd5e1,#475569);border-radius:4px}',
+      '.icon-shield{width:26px;height:26px;background:radial-gradient(circle,#fbbf24,#b45309);clip-path:polygon(50% 0%, 100% 25%, 80% 80%, 50% 100%, 20% 80%, 0% 25%)}',
+      '.icon-ring{width:26px;height:26px;background:radial-gradient(circle,#facc15,#ca8a04);border-radius:50%;border:2px solid #78350f}',
+      '.icon-sand{width:26px;height:26px;background:radial-gradient(circle,#fef08a,#eab308);border-radius:10%}',
+      '.icon-robe{width:26px;height:26px;background:radial-gradient(circle,#a855f7,#4c1d95);border-radius:20%}',
       '.dialogue-panel{position:absolute;bottom:120px;left:50%;transform:translateX(-50%);background:rgba(10,10,20,0.95);border:2px solid #22c55e;border-radius:12px;padding:18px 24px;width:440px;box-shadow:0 6px 25px rgba(0,0,0,0.8);z-index:30;pointer-events:auto;display:none;flex-direction:column;color:#fff}',
       '.dialogue-title{font-size:16px;font-weight:bold;color:#86efac;margin-bottom:2px}',
       '.dialogue-subtitle{font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px}',
@@ -232,6 +248,16 @@ export class Hud {
       '.shop-slot-name{font-size:10px;font-weight:bold;color:#fff;margin-top:4px;word-break:break-word}',
       '.shop-slot-price{font-size:9px;margin-top:2px}',
       '.shop-close{text-align:center;margin-top:14px;color:rgba(255,255,255,0.4);font-size:12px;cursor:pointer}',
+      '.character-panel{position:absolute;bottom:240px;left:16px;background:rgba(10,10,20,0.92);border:2px solid #b8860b;border-radius:8px;padding:12px;min-width:240px;box-shadow:0 6px 15px rgba(0,0,0,0.8);pointer-events:auto;font-family:sans-serif;z-index:10;display:none;flex-direction:column}',
+      '.paperdoll-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;justify-items:center}',
+      '.paperdoll-slot{position:relative;width:50px;height:50px;background:rgba(0,0,0,0.7);border:1px solid rgba(184,134,11,0.5);border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer}',
+      '.paperdoll-slot:hover{border-color:#ffd700;background:rgba(255,215,0,0.05)}',
+      '.paperdoll-slot.empty{border-color:rgba(255,255,255,0.15);background:rgba(0,0,0,0.4)}',
+      '.paperdoll-slot-label{font-size:8px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-top:2px;pointer-events:none}',
+      '.char-stats-list{display:flex;flex-direction:column;gap:4px;font-size:11px;color:#e5e7eb;margin-bottom:6px}',
+      '.char-stat-row{display:flex;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.05);padding:2px 0}',
+      '.char-stat-val{font-weight:bold;font-family:monospace}',
+      '.char-stat-bonus{color:#22c55e;margin-left:4px}',
     ].join('');
     document.head.appendChild(s);
   }
@@ -257,18 +283,14 @@ export class Hud {
   private buildActionBar(): void {
     const actionBar = document.createElement('div');
     actionBar.className = 'action-bar';
-    const spells = spellDefinitions.map(s => ({
-      k: s.keybind,
-      c: s.iconClass,
-      n: s.name,
-      co: `${s.manaCost}m`,
-      d: s.tooltip
-    }));
-    while (spells.length < 5) {
-      const k = (spells.length + 1).toString();
-      spells.push({ k, c: 'icon-empty', n: 'Empty', co: '', d: '' });
-    }
-    for (const sp of spells) {
+    const slotsData = [
+      { k: '1', c: 'icon-fireball', n: 'Fireball', co: '15m', d: '1.5s cast, 25 damage. Scales with Spell Power.' },
+      { k: '2', c: 'icon-frostbolt', n: 'Frostbolt', co: '10m', d: '1.0s cast, 15 damage. Scales with Spell Power.' },
+      { k: '3', c: 'icon-potion', n: 'Healing Potion', co: 'Use', d: 'Restores 50 Health instantly.', isItem: true, itemId: 'healing_potion' },
+      { k: '4', c: 'icon-potion-blue', n: 'Mana Potion', co: 'Use', d: 'Restores 50 Mana instantly.', isItem: true, itemId: 'mana_potion' },
+      { k: '5', c: 'icon-empty', n: 'Empty', co: '', d: '', isItem: false }
+    ];
+    for (const sp of slotsData) {
       const slot = document.createElement('div');
       slot.className = 'action-slot' + (sp.c === 'icon-empty' ? ' disabled' : '');
       const kb = document.createElement('span');
@@ -299,6 +321,18 @@ export class Hud {
     if (this.actionSlots[1]) {
       this.actionSlots[1].addEventListener('click', () =>
         window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit2' })));
+    }
+    if (this.actionSlots[2]) {
+      this.actionSlots[2].addEventListener('click', () =>
+        window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit3' })));
+    }
+    if (this.actionSlots[3]) {
+      this.actionSlots[3].addEventListener('click', () =>
+        window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit4' })));
+    }
+    if (this.actionSlots[4]) {
+      this.actionSlots[4].addEventListener('click', () =>
+        window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit5' })));
     }
     this.uiContainer.appendChild(actionBar);
   }
@@ -464,12 +498,17 @@ export class Hud {
    * @param playerHeight - world-unit height of the player model (for bar projection).
    */
   updatePlayer(
-    p: Player,
+    sim: any,
     playerHeight: number,
     camera: THREE.Camera,
     rendEl: HTMLElement,
   ): void {
+    this.sim = sim;
+    const p = sim.player;
     this.updateInventoryUI(p);
+    if (this._characterVisible) {
+      this.updateCharacterUI(p);
+    }
     // Static HUD panel (bottom-left)
     this.hudLevelEl.textContent = `Level ${p.level}`;
     this.hudHealthFill.style.width  = `${Math.max(0, (p.health  / p.maxHealth)  * 100)}%`;
@@ -632,6 +671,34 @@ export class Hud {
       const cost = spell ? spell.manaCost : 10;
       if (!hasTarget || player.mana < cost) this.actionSlots[1].classList.add('disabled');
       else                                  this.actionSlots[1].classList.remove('disabled');
+    }
+    if (this.actionSlots[2]) {
+      const item = player.inventory.find(i => i.itemId === 'healing_potion');
+      const count = item ? item.count : 0;
+      let countEl = this.actionSlots[2].querySelector('.slot-count');
+      if (!countEl) {
+        countEl = document.createElement('span');
+        countEl.className = 'slot-count';
+        countEl.setAttribute('style', 'position:absolute; bottom:2px; right:4px; font-size:10px; color:#fff; text-shadow:1px 1px 1px #000; font-family:monospace; font-weight:bold;');
+        this.actionSlots[2].appendChild(countEl);
+      }
+      countEl.textContent = count > 0 ? count.toString() : '0';
+      if (count === 0) this.actionSlots[2].classList.add('disabled');
+      else             this.actionSlots[2].classList.remove('disabled');
+    }
+    if (this.actionSlots[3]) {
+      const item = player.inventory.find(i => i.itemId === 'mana_potion');
+      const count = item ? item.count : 0;
+      let countEl = this.actionSlots[3].querySelector('.slot-count');
+      if (!countEl) {
+        countEl = document.createElement('span');
+        countEl.className = 'slot-count';
+        countEl.setAttribute('style', 'position:absolute; bottom:2px; right:4px; font-size:10px; color:#fff; text-shadow:1px 1px 1px #000; font-family:monospace; font-weight:bold;');
+        this.actionSlots[3].appendChild(countEl);
+      }
+      countEl.textContent = count > 0 ? count.toString() : '0';
+      if (count === 0) this.actionSlots[3].classList.add('disabled');
+      else             this.actionSlots[3].classList.remove('disabled');
     }
   }
 
@@ -879,16 +946,25 @@ export class Hud {
     } else {
       this.inventoryPanel.style.display = 'flex';
       this._inventoryVisible = true;
+      this.lastInventoryState = '';
+      if (this.sim) {
+        this.updateInventoryUI(this.sim.player);
+      }
     }
   }
 
   closeInventory(): void {
     this.inventoryPanel.style.display = 'none';
     this._inventoryVisible = false;
+    this.lastInventoryState = '';
   }
 
   updateInventoryUI(player: Player): void {
     if (!this._inventoryVisible) return;
+
+    const stateStr = JSON.stringify(player.inventory) + '_' + player.money;
+    if (stateStr === this.lastInventoryState) return;
+    this.lastInventoryState = stateStr;
 
     let html = '<div class="inventory-title"><span>Character Inventory</span><span style="cursor:pointer" id="inv-close-x">\u2715</span></div>';
     html += '<div class="inventory-grid">';
@@ -902,7 +978,7 @@ export class Hud {
         const name = def ? def.name : item.itemId;
         const rarity = def ? def.rarity : 'common';
         const desc = def ? def.desc : '';
-        html += `<div class="inventory-slot rarity-${rarity}" style="border-color: rgba(184,134,11,0.6)">` +
+        html += `<div class="inventory-slot rarity-${rarity}" data-index="${s}" style="border-color: rgba(184,134,11,0.6)">` +
                 `<div class="${iconCls}"></div>` +
                 `<span class="slot-count">${item.count > 1 ? item.count : ''}</span>` +
                 `<div class="slot-tooltip" style="bottom: 56px; right: 0; display: none; position: absolute; background: rgba(10,10,20,0.95); border: 1px solid #b8860b; color: #fff; padding: 6px 10px; font-size: 10px; border-radius: 4px; white-space: nowrap; z-index: 50; pointer-events: none">` +
@@ -922,7 +998,7 @@ export class Hud {
     const closeX = this.inventoryPanel.querySelector('#inv-close-x');
     if (closeX) closeX.addEventListener('click', () => this.closeInventory());
 
-    // Tooltip hovering
+    // Tooltip hovering and click-to-equip bindings
     const slots = this.inventoryPanel.querySelectorAll('.inventory-slot:not(.empty)');
     slots.forEach(slot => {
       const tip = slot.querySelector('.slot-tooltip') as HTMLElement;
@@ -930,6 +1006,155 @@ export class Hud {
         slot.addEventListener('mouseenter', () => tip.style.display = 'block');
         slot.addEventListener('mouseleave', () => tip.style.display = 'none');
       }
+
+      slot.addEventListener('click', () => {
+        const idx = parseInt((slot as HTMLElement).dataset.index ?? '-1', 10);
+        if (idx >= 0 && this.sim) {
+          const item = player.inventory[idx];
+          if (!item) return;
+          const def = getItemDef(item.itemId);
+          if (def && def.usable) {
+            const success = this.sim.useItem(idx);
+            if (success) {
+              this.showMessage(`Consumed ${def.name}`, 2000, '#60a5fa');
+              this.updateInventoryUI(player);
+              if (this._characterVisible) {
+                this.updateCharacterUI(player);
+              }
+            }
+          } else {
+            const success = this.sim.equipItem(idx);
+            if (success) {
+              this.updateInventoryUI(player);
+              if (this._characterVisible) {
+                this.updateCharacterUI(player);
+              }
+            }
+          }
+        }
+      });
+    });
+  }
+
+  buildCharacterUI(): void {
+    this.characterPanel = document.createElement('div');
+    this.characterPanel.className = 'character-panel';
+    this.characterPanel.style.display = 'none';
+    this.uiContainer.appendChild(this.characterPanel);
+  }
+
+  toggleCharacter(): void {
+    if (this._characterVisible) {
+      this.closeCharacter();
+    } else {
+      this._characterVisible = true;
+      this.characterPanel.style.display = 'flex';
+      this.lastCharacterState = '';
+      if (this.sim) {
+        this.updateCharacterUI(this.sim.player);
+      }
+    }
+  }
+
+  closeCharacter(): void {
+    this.characterPanel.style.display = 'none';
+    this._characterVisible = false;
+    this.lastCharacterState = '';
+  }
+
+  updateCharacterUI(player: Player): void {
+    if (!this._characterVisible) return;
+
+    const stateStr = JSON.stringify(player.equipment) + '_' + player.level + '_' + Math.floor(player.health) + '_' + Math.floor(player.mana);
+    if (stateStr === this.lastCharacterState) return;
+    this.lastCharacterState = stateStr;
+
+    let html = '<div class="inventory-title"><span>Character Sheet</span><span style="cursor:pointer" id="char-close-x">\u2715</span></div>';
+    
+    // Paperdoll Grid
+    html += '<div class="paperdoll-grid">';
+    const slots: { key: keyof PlayerEquipment; label: string }[] = [
+      { key: 'weapon', label: 'Weapon' },
+      { key: 'shield', label: 'Shield' },
+      { key: 'chest', label: 'Chest' },
+      { key: 'ring', label: 'Ring' }
+    ];
+
+    slots.forEach(slot => {
+      const itemId = player.equipment[slot.key];
+      if (itemId) {
+        const def = getItemDef(itemId);
+        const iconCls = def ? def.icon : 'icon-empty';
+        const name = def ? def.name : itemId;
+        const rarity = def ? def.rarity : 'common';
+        const desc = def ? def.desc : '';
+        html += `<div class="paperdoll-slot rarity-${rarity}" data-slot="${slot.key as string}" style="border-color: rgba(184,134,11,0.6)">` +
+                `<div class="${iconCls}"></div>` +
+                `<span class="paperdoll-slot-label">${slot.label}</span>` +
+                `<div class="slot-tooltip" style="bottom: 56px; left: 0; display: none; position: absolute; background: rgba(10,10,20,0.95); border: 1px solid #b8860b; color: #fff; padding: 6px 10px; font-size: 10px; border-radius: 4px; white-space: nowrap; z-index: 50; pointer-events: none">` +
+                `<strong>${name}</strong><br><span class="rarity-${rarity}" style="font-weight:bold">${rarity.toUpperCase()}</span><br>${desc}<br><span style="color:#ef4444">Click to unequip</span></div>` +
+                `</div>`;
+      } else {
+        html += `<div class="paperdoll-slot empty" data-slot="${slot.key as string}">` +
+                `<div class="icon-empty"></div>` +
+                `<span class="paperdoll-slot-label">${slot.label}</span>` +
+                `</div>`;
+      }
+    });
+    html += '</div>';
+
+    // Stats List
+    let extraHealth = 0;
+    let extraMana = 0;
+    let extraSpellPower = 0;
+
+    for (const itemId of Object.values(player.equipment)) {
+      if (!itemId) continue;
+      const def = getItemDef(itemId);
+      if (!def) continue;
+      if (def.healthBonus) extraHealth += def.healthBonus;
+      if (def.manaBonus) extraMana += def.manaBonus;
+      if (def.spellDamageBonus) extraSpellPower += def.spellDamageBonus;
+    }
+
+    const healthBonusStr = extraHealth > 0 ? ` <span class="char-stat-bonus">(+${extraHealth})</span>` : '';
+    const manaBonusStr = extraMana > 0 ? ` <span class="char-stat-bonus">(+${extraMana})</span>` : '';
+    const spBonusStr = extraSpellPower > 0 ? ` <span class="char-stat-bonus">(+${extraSpellPower})</span>` : '';
+
+    html += '<div class="char-stats-list">';
+    html += `<div class="char-stat-row"><span>Level</span><span class="char-stat-val">${player.level}</span></div>`;
+    html += `<div class="char-stat-row"><span>Health</span><span class="char-stat-val">${Math.floor(player.health)}/${player.maxHealth}${healthBonusStr}</span></div>`;
+    html += `<div class="char-stat-row"><span>Mana</span><span class="char-stat-val">${Math.floor(player.mana)}/${player.maxMana}${manaBonusStr}</span></div>`;
+    html += `<div class="char-stat-row"><span>Spell Power</span><span class="char-stat-val">${player.spellPower}${spBonusStr}</span></div>`;
+    html += '</div>';
+
+    this.characterPanel.innerHTML = html;
+
+    // Click close
+    const closeX = this.characterPanel.querySelector('#char-close-x');
+    if (closeX) closeX.addEventListener('click', () => this.closeCharacter());
+
+    // Tooltip hovering and unequip click handlers
+    const pslots = this.characterPanel.querySelectorAll('.paperdoll-slot:not(.empty)');
+    pslots.forEach(slot => {
+      const tip = slot.querySelector('.slot-tooltip') as HTMLElement;
+      if (tip) {
+        slot.addEventListener('mouseenter', () => tip.style.display = 'block');
+        slot.addEventListener('mouseleave', () => tip.style.display = 'none');
+      }
+
+      slot.addEventListener('click', () => {
+        const slotKey = (slot as HTMLElement).dataset.slot ?? '';
+        if (slotKey && this.sim) {
+          const success = this.sim.unequipItem(slotKey);
+          if (success) {
+            this.updateCharacterUI(player);
+            this.updateInventoryUI(player);
+          } else {
+            this.showMessage('Cannot unequip item (bag is full)', 2500, '#ef4444');
+          }
+        }
+      });
     });
   }
 
@@ -1132,6 +1357,20 @@ function formatMoneyHtml(copper: number): string {
   return parts.join(' ');
 }
 
-function getItemDef(itemId: string): { name: string; rarity: string; desc: string; icon: string; value?: number } | null {
+function getItemDef(itemId: string): {
+  name: string;
+  rarity: string;
+  desc: string;
+  icon: string;
+  value?: number;
+  slot?: string;
+  healthBonus?: number;
+  manaBonus?: number;
+  spellDamageBonus?: number;
+  modelUrl?: string;
+  usable?: boolean;
+  restoreHealth?: number;
+  restoreMana?: number;
+} | null {
   return (itemDefinitions as any)[itemId] || null;
 }

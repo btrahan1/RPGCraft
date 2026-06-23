@@ -117,7 +117,7 @@
         "Take a look, but touch with care. The desert wind makes the items fragile!"
       ],
       "shop": {
-        "items": ["healing_potion", "mana_potion", "bronze_ring"]
+        "items": ["healing_potion", "mana_potion", "bronze_ring", "apprentice_robe"]
       }
     },
     {

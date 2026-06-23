@@ -16,6 +16,16 @@ export interface SaveGame {
   maxStamina: number;
   inventory?: { itemId: string; count: number }[];
   money?: number;
+  // NEW GEAR & STATS:
+  baseMaxHealth?: number;
+  baseMaxMana?: number;
+  spellPower?: number;
+  equipment?: {
+    weapon: string | null;
+    shield: string | null;
+    chest: string | null;
+    ring: string | null;
+  };
 }
 
 const SAVE_KEY = 'rpgcraft-savegame';
@@ -43,6 +53,10 @@ export function saveGame(sim: Sim, currentZoneKey: string): void {
     maxStamina: p.maxStamina,
     inventory: p.inventory,
     money: p.money,
+    baseMaxHealth: p.baseMaxHealth,
+    baseMaxMana: p.baseMaxMana,
+    spellPower: p.spellPower,
+    equipment: p.equipment,
   };
 
   try {
@@ -91,4 +105,8 @@ export function applyLoadedSave(p: Sim['player'], s: SaveGame): void {
   p.maxStamina   = s.maxStamina       ?? 100;
   p.inventory    = s.inventory        ?? [];
   p.money        = s.money            ?? 0;
+  p.baseMaxHealth = s.baseMaxHealth   ?? 100;
+  p.baseMaxMana  = s.baseMaxMana      ?? 100;
+  p.spellPower   = s.spellPower       ?? 15;
+  p.equipment    = s.equipment        ?? { weapon: null, shield: null, chest: null, ring: null };
 }

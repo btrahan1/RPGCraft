@@ -138,7 +138,7 @@
         "We serve the finest mead in Oakvale. Take a seat by the hearth!"
       ],
       "shop": {
-        "items": ["healing_potion", "mana_potion"]
+        "items": ["healing_potion", "mana_potion", "apprentice_robe"]
       }
     },
     {

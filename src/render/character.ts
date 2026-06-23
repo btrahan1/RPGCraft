@@ -67,6 +67,9 @@ export class CharacterVisual {
   private idleAction: THREE.AnimationAction | null = null;
   private walkAction: THREE.AnimationAction | null = null;
   private currentAction: THREE.AnimationAction | null = null;
+  private modelGroup: THREE.Group | null = null;
+  private attachedWeapon: THREE.Group | null = null;
+  private attachedShield: THREE.Group | null = null;
 
   constructor(def: CharacterDef) {
     this.height = def.height;
@@ -80,6 +83,7 @@ export class CharacterVisual {
       // Load and clone -- clone gives this instance its own independent skeleton
       const { scene: source, animations } = await loadGlb(def.url);
       const model = skeletonClone(source) as THREE.Group;
+      this.modelGroup = model;
 
       // Normalize scale so the model is exactly def.height tall, feet at y=0.
       // Calculate bounding box directly from mesh vertices (with bone transforms) to avoid armature/helper skewing.
@@ -131,24 +135,9 @@ export class CharacterVisual {
 
     this.root.add(model);
 
-    // Weapon attachment
+    // Default Weapon attachment
     if (def.attach) {
-      const { scene: weaponSource } = await loadGlb(def.attach.url);
-      const weaponClone = skeletonClone(weaponSource) as THREE.Group;
-      weaponClone.traverse((o) => {
-        const mesh = o as THREE.Mesh;
-        if (mesh.isMesh) { mesh.castShadow = true; mesh.receiveShadow = false; }
-      });
-
-      // GLTFLoader sanitizes bone names: 'handslot.r' -> 'handslotr'
-      const boneName = def.attach.bone;
-      const sanitized = boneName.replace(/\./g, '');
-      const bone = model.getObjectByName(boneName) ?? model.getObjectByName(sanitized);
-      if (bone) {
-        bone.add(weaponClone);
-      } else {
-        console.warn(`CharacterVisual: bone '${boneName}' not found -- weapon not attached`);
-      }
+      await this.attachEquipment('weapon', def.attach.url);
     }
 
     // Animation mixer -- animations come from the cached GLTF, actions from the cloned model
@@ -170,6 +159,63 @@ export class CharacterVisual {
       this.ready = true;
     } catch (err) {
       console.error(`CharacterVisual: failed to load model '${def.url}':`, err);
+    }
+  }
+
+  async attachEquipment(slot: 'weapon' | 'shield', url: string): Promise<void> {
+    if (!this.modelGroup) return;
+
+    // Detach first
+    this.detachEquipment(slot);
+
+    try {
+      const { scene: source } = await loadGlb(url);
+      const clone = skeletonClone(source) as THREE.Group;
+      clone.traverse((o) => {
+        const mesh = o as THREE.Mesh;
+        if (mesh.isMesh) {
+          mesh.castShadow = true;
+          mesh.receiveShadow = false;
+        }
+      });
+
+      const boneName = slot === 'weapon' ? 'handslot.r' : 'handslot.l';
+      const sanitized = boneName.replace(/\./g, '');
+      const bone = this.modelGroup.getObjectByName(boneName) ?? this.modelGroup.getObjectByName(sanitized);
+      if (bone) {
+        bone.add(clone);
+        if (slot === 'weapon') {
+          this.attachedWeapon = clone;
+        } else {
+          this.attachedShield = clone;
+        }
+      } else {
+        console.warn(`CharacterVisual: bone '${boneName}' not found for slot '${slot}'`);
+      }
+    } catch (err) {
+      console.error(`CharacterVisual: failed to load equipment model '${url}':`, err);
+    }
+  }
+
+  detachEquipment(slot: 'weapon' | 'shield'): void {
+    if (slot === 'weapon') {
+      if (this.attachedWeapon) {
+        this.attachedWeapon.removeFromParent();
+        this.attachedWeapon.traverse((o) => {
+          const mesh = o as THREE.Mesh;
+          if (mesh.isMesh) mesh.geometry?.dispose();
+        });
+        this.attachedWeapon = null;
+      }
+    } else {
+      if (this.attachedShield) {
+        this.attachedShield.removeFromParent();
+        this.attachedShield.traverse((o) => {
+          const mesh = o as THREE.Mesh;
+          if (mesh.isMesh) mesh.geometry?.dispose();
+        });
+        this.attachedShield = null;
+      }
     }
   }
 

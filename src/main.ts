@@ -17,6 +17,7 @@ if (loadedSave) {
   currentZoneKey = loadedSave.currentZoneKey;
   sim = new Sim(currentZoneKey);
   applyLoadedSave(sim.player, loadedSave);
+  sim.recalculateStats(); // Recalculate stats with loaded equipment
 } else {
   sim = new Sim(currentZoneKey);
 }

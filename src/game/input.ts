@@ -14,6 +14,9 @@ export interface InputState {
   spawnOrc: boolean;         // one-shot: true for exactly one frame after Shift+O
   castSpell1: boolean;       // one-shot: true for exactly one frame after pressing 1
   castSpell2: boolean;       // one-shot: true for exactly one frame after pressing 2
+  useHotbar3: boolean;       // one-shot: true for exactly one frame after pressing 3
+  useHotbar4: boolean;       // one-shot: true for exactly one frame after pressing 4
+  useHotbar5: boolean;       // one-shot: true for exactly one frame after pressing 5
   targetNext: boolean;       // one-shot: true for exactly one frame after pressing Tab
   interact: boolean;         // one-shot: true for exactly one frame after pressing E
   save: boolean;             // one-shot: true for exactly one frame after pressing K
@@ -37,6 +40,9 @@ const state: InputState = {
   spawnOrc: false,
   castSpell1: false,
   castSpell2: false,
+  useHotbar3: false,
+  useHotbar4: false,
+  useHotbar5: false,
   targetNext: false,
   interact: false,
   save: false,
@@ -101,6 +107,30 @@ export function listenInput(cvs: HTMLCanvasElement): void {
       return;
     }
 
+    // One-shot: 3 triggers hotbar 3
+    if ((e.code === 'Digit3' || e.key === '3') && !state.keyboard.justPressed.has('Digit3')) {
+      state.keyboard.justPressed.add('Digit3');
+      state.useHotbar3 = true;
+      e.preventDefault();
+      return;
+    }
+
+    // One-shot: 4 triggers hotbar 4
+    if ((e.code === 'Digit4' || e.key === '4') && !state.keyboard.justPressed.has('Digit4')) {
+      state.keyboard.justPressed.add('Digit4');
+      state.useHotbar4 = true;
+      e.preventDefault();
+      return;
+    }
+
+    // One-shot: 5 triggers hotbar 5
+    if ((e.code === 'Digit5' || e.key === '5') && !state.keyboard.justPressed.has('Digit5')) {
+      state.keyboard.justPressed.add('Digit5');
+      state.useHotbar5 = true;
+      e.preventDefault();
+      return;
+    }
+
     // One-shot: Tab targets next
     if ((e.code === 'Tab' || e.key === 'Tab') && !state.keyboard.justPressed.has('Tab')) {
       state.keyboard.justPressed.add('Tab');
@@ -145,6 +175,9 @@ export function listenInput(cvs: HTMLCanvasElement): void {
     // Also support fallback keys for justPressed cleanup
     if (e.key === '1') state.keyboard.justPressed.delete('Digit1');
     if (e.key === '2') state.keyboard.justPressed.delete('Digit2');
+    if (e.key === '3') state.keyboard.justPressed.delete('Digit3');
+    if (e.key === '4') state.keyboard.justPressed.delete('Digit4');
+    if (e.key === '5') state.keyboard.justPressed.delete('Digit5');
     if (e.key === 'Tab') state.keyboard.justPressed.delete('Tab');
     if (e.key === 'o' || e.key === 'O') state.keyboard.justPressed.delete('KeyO');
     if (e.key === 'e' || e.key === 'E') state.keyboard.justPressed.delete('KeyE');
@@ -209,6 +242,9 @@ export function getInput(): InputState {
   state.spawnOrc = false;
   state.castSpell1 = false;
   state.castSpell2 = false;
+  state.useHotbar3 = false;
+  state.useHotbar4 = false;
+  state.useHotbar5 = false;
   state.targetNext = false;
   state.interact = false;
   state.save = false;

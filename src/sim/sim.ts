@@ -37,6 +37,9 @@ export interface SimInput {
   spawnOrc: boolean;
   castSpell1: boolean;
   castSpell2: boolean;
+  useHotbar3?: boolean;
+  useHotbar4?: boolean;
+  useHotbar5?: boolean;
   targetNext: boolean;
   interact: boolean;        // E key – interact with objects like portals
   openPortalUI: boolean;    // true when the portal list is opened by the renderer
@@ -64,6 +67,13 @@ export interface LootContainer {
   items: LootItem[];
 }
 
+export interface PlayerEquipment {
+  weapon: string | null;
+  shield: string | null;
+  chest: string | null;
+  ring: string | null;
+}
+
 export interface Player {
   id: string;
   x: number;
@@ -83,6 +93,11 @@ export interface Player {
   activeCast: SpellCast | null;
   inventory: LootItem[];
   money: number;
+  // NEW GEAR & STATS:
+  baseMaxHealth: number;
+  baseMaxMana: number;
+  spellPower: number;
+  equipment: PlayerEquipment;
 }
 
 export interface Mob {
@@ -162,7 +177,16 @@ export class Sim {
     targetId: null,
     activeCast: null,
     inventory: [],
-    money: 0
+    money: 0,
+    baseMaxHealth: 100,
+    baseMaxMana: 100,
+    spellPower: 15,
+    equipment: {
+      weapon: null,
+      shield: null,
+      chest: null,
+      ring: null
+    }
   };
   readonly zone: ZoneData;
   readonly mobs: Mob[] = [];
@@ -206,6 +230,10 @@ export class Sim {
     p.facing = from.player.facing;
     p.inventory = from.player.inventory;
     p.money = from.player.money;
+    p.baseMaxHealth = from.player.baseMaxHealth;
+    p.baseMaxMana = from.player.baseMaxMana;
+    p.spellPower = from.player.spellPower;
+    p.equipment = { ...from.player.equipment };
     // Place player at the spawn coordinates
     p.x = spawnX;
     p.z = spawnZ;
@@ -260,12 +288,13 @@ export class Sim {
     while (p.experience >= p.nextLevelExp) {
       p.experience -= p.nextLevelExp;
       p.level++;
-      p.maxHealth += gameConfig.player.levelUpHealthGain;
-      p.health = p.maxHealth;
-      p.maxMana += gameConfig.player.levelUpManaGain;
-      p.mana = p.maxMana;
+      p.baseMaxHealth += gameConfig.player.levelUpHealthGain;
+      p.baseMaxMana += gameConfig.player.levelUpManaGain;
       p.maxStamina += gameConfig.player.levelUpStaminaGain;
       p.stamina = p.maxStamina;
+      this.recalculateStats();
+      p.health = p.maxHealth;
+      p.mana = p.maxMana;
       p.nextLevelExp = calcLevelUpXp(p.level);
       this.combatEvents.push({
         id: this.generateId('evt'),
@@ -282,6 +311,20 @@ export class Sim {
     const p = this.player;
 
     this.combatEvents = [];
+
+    // ── Hotbar Item Activation ──────────────────────────────────────
+    if (input.useHotbar3) {
+      const idx = p.inventory.findIndex(i => i.itemId === 'healing_potion');
+      if (idx >= 0) {
+        this.useItem(idx);
+      }
+    }
+    if (input.useHotbar4) {
+      const idx = p.inventory.findIndex(i => i.itemId === 'mana_potion');
+      if (idx >= 0) {
+        this.useItem(idx);
+      }
+    }
 
     // ── Portal Proximity Check ──────────────────────────────────────────
     // Just check and expose proximity — do NOT auto-transition
@@ -381,13 +424,15 @@ export class Sim {
         const target = this.mobs.find(m => m.id === targetId);
         if (target && target.health > 0) {
           const spell = spellDefinitions.find(s => s.id === p.activeCast!.spellId);
+          const baseDamage = spell ? spell.damage : 15;
+          const bonus = Math.max(0, p.spellPower - 15);
           this.projectiles.push({
             id: this.generateId('proj'),
             x: p.x,
             z: p.z,
             targetId: targetId,
             speed: PROJECTILE_SPEED,
-            damage: spell ? spell.damage : 15,
+            damage: baseDamage + bonus,
             spellType: p.activeCast.spellId as 'fireball' | 'frostbolt'
           });
         }
@@ -762,5 +807,132 @@ export class Sim {
       this.player.inventory.splice(itemIdx, 1);
     }
     return true;
+  }
+
+  recalculateStats(): void {
+    const p = this.player;
+    let extraHealth = 0;
+    let extraMana = 0;
+    let extraSpellPower = 0;
+
+    for (const itemId of Object.values(p.equipment)) {
+      if (!itemId) continue;
+      const def = (itemDefinitions as any)[itemId];
+      if (!def) continue;
+      if (def.healthBonus) extraHealth += def.healthBonus;
+      if (def.manaBonus) extraMana += def.manaBonus;
+      if (def.spellDamageBonus) extraSpellPower += def.spellDamageBonus;
+    }
+
+    const prevMaxH = p.maxHealth;
+    const prevMaxM = p.maxMana;
+
+    p.maxHealth = p.baseMaxHealth + extraHealth;
+    p.maxMana = p.baseMaxMana + extraMana;
+    p.spellPower = 15 + extraSpellPower;
+
+    // Adjust current health/mana proportionally or just clamp
+    if (p.maxHealth !== prevMaxH) {
+      p.health = Math.min(p.maxHealth, Math.max(0, p.health + (p.maxHealth - prevMaxH)));
+    }
+    if (p.maxMana !== prevMaxM) {
+      p.mana = Math.min(p.maxMana, Math.max(0, p.mana + (p.maxMana - prevMaxM)));
+    }
+  }
+
+  equipItem(itemIdx: number): boolean {
+    const p = this.player;
+    if (itemIdx < 0 || itemIdx >= p.inventory.length) return false;
+    const invItem = p.inventory[itemIdx];
+    if (!invItem) return false;
+
+    const def = (itemDefinitions as any)[invItem.itemId];
+    if (!def || !def.slot) return false; // not an equippable item
+
+    const slot = def.slot as keyof PlayerEquipment;
+    const currentlyEquipped = p.equipment[slot];
+
+    // Decrement from inventory
+    if (invItem.count > 1) {
+      invItem.count -= 1;
+    } else {
+      p.inventory.splice(itemIdx, 1);
+    }
+
+    // Equip the new item
+    p.equipment[slot] = invItem.itemId;
+
+    // Swap back previously equipped item to inventory if any
+    if (currentlyEquipped) {
+      const existing = p.inventory.find(i => i.itemId === currentlyEquipped);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        p.inventory.push({ itemId: currentlyEquipped, count: 1 });
+      }
+    }
+
+    this.recalculateStats();
+    return true;
+  }
+
+  unequipItem(slot: string): boolean {
+    const p = this.player;
+    const slotKey = slot as keyof PlayerEquipment;
+    const itemId = p.equipment[slotKey];
+    if (!itemId) return false;
+
+    // Check inventory space (must have slot available if it's a new unique item)
+    const existing = p.inventory.find(i => i.itemId === itemId);
+    if (!existing && p.inventory.length >= 16) return false; // inventory full
+
+    // Remove from slot
+    p.equipment[slotKey] = null;
+
+    // Put back to inventory
+    if (existing) {
+      existing.count += 1;
+    } else {
+      p.inventory.push({ itemId, count: 1 });
+    }
+
+    this.recalculateStats();
+    return true;
+  }
+
+  useItem(itemIdx: number): boolean {
+    const p = this.player;
+    if (itemIdx < 0 || itemIdx >= p.inventory.length) return false;
+    const invItem = p.inventory[itemIdx];
+    if (!invItem) return false;
+
+    const def = (itemDefinitions as any)[invItem.itemId];
+    if (!def || !def.usable) return false;
+
+    let consumed = false;
+    if (def.restoreHealth) {
+      if (p.health < p.maxHealth) {
+        p.health = Math.min(p.maxHealth, p.health + def.restoreHealth);
+        consumed = true;
+      }
+    }
+    if (def.restoreMana) {
+      if (p.mana < p.maxMana) {
+        p.mana = Math.min(p.maxMana, p.mana + def.restoreMana);
+        consumed = true;
+      }
+    }
+
+    if (consumed) {
+      if (invItem.count > 1) {
+        invItem.count -= 1;
+      } else {
+        p.inventory.splice(itemIdx, 1);
+      }
+      this.recalculateStats();
+      return true;
+    }
+
+    return false;
   }
 }

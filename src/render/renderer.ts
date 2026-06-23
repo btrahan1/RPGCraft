@@ -11,6 +11,7 @@ import { WorldRenderer } from './world-renderer';
 import { Hud } from './hud';
 import { MOB_REGISTRY } from '../sim/world';
 import playerDefinitions from '../data/player_definitions.json';
+import itemDefinitions from '../data/item_definitions.json';
 import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js';
 
 // ── Camera constants ──────────────────────────────────────────────────────
@@ -66,6 +67,8 @@ export class Renderer {
   private hud!: Hud;
   private onResizeBound!: () => void;
   private mouseUpBound!: (e: MouseEvent) => void;
+  private lastEquippedWeapon: string | null = null;
+  private lastEquippedShield: string | null = null;
 
   constructor(canvas: HTMLCanvasElement, sim: Sim) {
     this.sim = sim;
@@ -216,6 +219,43 @@ export class Renderer {
     this.playerVisual.root.rotation.y = p.facing;
     this.playerVisual.update(dt, { moving: p.moving, movingBack: false });
 
+    // Sync 3D weapon and shield attachments
+    const eq = p.equipment;
+    if (eq) {
+      if (eq.weapon !== this.lastEquippedWeapon) {
+        this.lastEquippedWeapon = eq.weapon;
+        if (eq.weapon) {
+          const itemDef = (itemDefinitions as any)[eq.weapon];
+          if (itemDef && itemDef.modelUrl) {
+            this.playerVisual.attachEquipment('weapon', itemDef.modelUrl);
+          } else {
+            this.playerVisual.detachEquipment('weapon');
+          }
+        } else {
+          // If no weapon is equipped, return to playerDefinitions default
+          const defaultWeapon = playerDefinitions.mage.weapon;
+          if (defaultWeapon) {
+            this.playerVisual.attachEquipment('weapon', defaultWeapon.url);
+          } else {
+            this.playerVisual.detachEquipment('weapon');
+          }
+        }
+      }
+      if (eq.shield !== this.lastEquippedShield) {
+        this.lastEquippedShield = eq.shield;
+        if (eq.shield) {
+          const itemDef = (itemDefinitions as any)[eq.shield];
+          if (itemDef && itemDef.modelUrl) {
+            this.playerVisual.attachEquipment('shield', itemDef.modelUrl);
+          } else {
+            this.playerVisual.detachEquipment('shield');
+          }
+        } else {
+          this.playerVisual.detachEquipment('shield');
+        }
+      }
+    }
+
     // ── Mob visuals ─────────────────────────────────────────────────────
     while (this.mobVisuals.length < sim.mobs.length) {
       const m  = sim.mobs[this.mobVisuals.length];
@@ -351,7 +391,7 @@ export class Renderer {
       this.hud.showDialogue(sim.zone.npcs[sim.nearNpcIndex], sim);
     }
 
-    this.hud.updatePlayer(p, this.playerVisual.height, this.camera, rendEl);
+    this.hud.updatePlayer(sim, this.playerVisual.height, this.camera, rendEl);
     this.hud.updateMobs(sim.mobs, this.mobVisuals, this.camera, rendEl);
     this.hud.updateNpcs(sim.zone.npcs, this.npcVisuals, this.camera, rendEl);
     this.hud.updateBuildings(sim.zone.buildings, this.camera, rendEl);
