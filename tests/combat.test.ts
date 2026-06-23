@@ -142,4 +142,28 @@ describe('Combat and Spellcasting Simulation', () => {
     expect(sim.combatEvents[0].type).toBe('damage');
     expect(sim.combatEvents[0].value).toBe(25);
   });
+
+  it('should block player movement when colliding with building AABB bounds', () => {
+    const sim = new Sim();
+    
+    // Set player position just outside the Inn (AABB max X is -9.2)
+    sim.player.x = -8.5;
+    sim.player.z = -8.0;
+    sim.player.facing = -Math.PI / 2; // Facing West (towards the Inn)
+    
+    // Try to move forward into the Inn (speed is 8, so in 0.1s it moves 0.8 units)
+    sim.tick(0.1, {
+      moveForward: true,
+      moveBack: false,
+      turnLeft: false,
+      turnRight: false,
+      spawnOrc: false,
+      castSpell1: false,
+      castSpell2: false,
+      targetNext: false
+    });
+    
+    // Player position should be blocked and remain outside the Inn bounds (should not cross the -9.2 threshold + radius)
+    expect(sim.player.x).toBeGreaterThan(-9.2);
+  });
 });

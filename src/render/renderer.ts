@@ -4,6 +4,7 @@ import { CharacterVisual } from './character';
 import type { InputState } from '../game/input';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { WORLD_LAYOUT } from '../sim/world';
 
 // Orbit camera state initial values (world-relative orbit)
 const INITIAL_DIST   = 18;
@@ -55,6 +56,68 @@ interface DamageNumber {
   maxAge: number;
 }
 
+function createGrassTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = '#1e381b'; // rich dark forest grass green
+  ctx.fillRect(0, 0, 256, 256);
+  // Add noise
+  for (let i = 0; i < 3000; i++) {
+    ctx.fillStyle = Math.random() > 0.5 ? '#244520' : '#142712';
+    ctx.fillRect(Math.random() * 256, Math.random() * 256, 3, 3);
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(40, 40);
+  return tex;
+}
+
+function createCobblestoneTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = '#26262b'; // slate dark base
+  ctx.fillRect(0, 0, 256, 256);
+  
+  ctx.strokeStyle = '#18181a';
+  ctx.lineWidth = 1.5;
+  const size = 16;
+  for (let y = 0; y < 256; y += size) {
+    const shift = ((y / size) % 2) * (size / 2);
+    for (let x = -size; x < 256 + size; x += size) {
+      ctx.fillStyle = Math.random() > 0.4 ? '#38383e' : '#222226';
+      ctx.fillRect(x + shift, y, size - 2, size - 2);
+      ctx.strokeRect(x + shift, y, size - 2, size - 2);
+    }
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(6, 5);
+  return tex;
+}
+
+function createRoadTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = '#4c3e31'; // dirt/gravel base
+  ctx.fillRect(0, 0, 128, 128);
+  for (let i = 0; i < 1500; i++) {
+    ctx.fillStyle = Math.random() > 0.5 ? '#5d4c3c' : '#392e24';
+    ctx.fillRect(Math.random() * 128, Math.random() * 128, 2, 2);
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
 export class Renderer {
   private scene: THREE.Scene;
   private camera: THREE.PerspectiveCamera;
@@ -87,10 +150,10 @@ export class Renderer {
   constructor(canvas: HTMLCanvasElement, sim: Sim) {
     this.sim = sim;
 
-    // Scene
+    // Scene - Beautiful bright daytime sky
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x1a1a2e);
-    this.scene.fog = new THREE.Fog(0x1a1a2e, 40, 120);
+    this.scene.background = new THREE.Color(0xbbe1fa); // clear sky blue
+    this.scene.fog = new THREE.Fog(0xbbe1fa, 50, 150);
 
     // Camera -- will be updated in render()
     this.camera = new THREE.PerspectiveCamera(55, canvas.clientWidth / canvas.clientHeight, 0.1, 500);
@@ -105,34 +168,32 @@ export class Renderer {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.1;
 
-    // Lighting
-    const sun = new THREE.DirectionalLight(0xfff4e0, 2.0);
-    sun.position.set(30, 60, 20);
+    // Lighting - Bright daytime sunlight
+    const sun = new THREE.DirectionalLight(0xfffef0, 2.2); // Warm white sun
+    sun.position.set(40, 70, 30);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
     sun.shadow.camera.near = 0.5;
     sun.shadow.camera.far = 200;
-    sun.shadow.camera.left = -40;
-    sun.shadow.camera.right = 40;
-    sun.shadow.camera.top = 40;
-    sun.shadow.camera.bottom = -40;
-    sun.shadow.bias = -0.001;
+    sun.shadow.camera.left = -45;
+    sun.shadow.camera.right = 45;
+    sun.shadow.camera.top = 45;
+    sun.shadow.camera.bottom = -45;
+    sun.shadow.bias = -0.0008;
     this.scene.add(sun);
-    this.scene.add(new THREE.AmbientLight(0x404080, 1.2));
+    this.scene.add(new THREE.AmbientLight(0xf1f5f9, 1.4)); // Bright daylight ambient sky light
 
-    // Ground
+    // Ground with Grass Texture
+    const grassTex = createGrassTexture();
     const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(200, 200),
-      new THREE.MeshLambertMaterial({ color: 0x2d5a27 }),
+      new THREE.PlaneGeometry(250, 250),
+      new THREE.MeshLambertMaterial({ map: grassTex }),
     );
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     this.scene.add(ground);
 
-    // Some rocks/trees for visual reference so movement reads clearly
-    this.addScenery();
-
-    // Town Buildings
+    // Town Buildings and layout
     this.addTownBuildings();
 
     // Player character
@@ -769,42 +830,14 @@ export class Renderer {
       }
     }
 
+    // Animate bonfire light flicker dynamically
+    this.scene.traverse((o) => {
+      if (o instanceof THREE.PointLight && o.color.getHex() === 0xff6600) {
+        o.intensity = 2.4 + Math.sin(performance.now() * 0.015) * 0.6 + Math.random() * 0.2;
+      }
+    });
+
     this.renderer.render(this.scene, this.camera);
-  }
-
-  private addScenery(): void {
-    const treeMat = new THREE.MeshLambertMaterial({ color: 0x1a5c1a });
-    const trunkMat = new THREE.MeshLambertMaterial({ color: 0x4a3728 });
-    const rockMat = new THREE.MeshLambertMaterial({ color: 0x6b6560 });
-
-    const positions: [number, number][] = [
-      [12, 8], [-15, 5], [20, -10], [-8, 20], [5, -18],
-      [30, 3], [-25, -12], [18, 25], [-30, 18], [10, -30],
-      [-18, -22], [35, -20], [-12, 35], [25, -35], [-35, 5],
-    ];
-
-    for (const [x, z] of positions) {
-      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 2, 6), trunkMat);
-      trunk.position.set(x, 1, z);
-      trunk.castShadow = true;
-      this.scene.add(trunk);
-
-      const canopy = new THREE.Mesh(new THREE.ConeGeometry(1.4, 3.5, 7), treeMat);
-      canopy.position.set(x, 3.5, z);
-      canopy.castShadow = true;
-      this.scene.add(canopy);
-    }
-
-    const rockPositions: [number, number][] = [
-      [7, 12], [-20, 7], [16, -18], [-5, 28], [28, 10],
-    ];
-    for (const [x, z] of rockPositions) {
-      const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1.0 + Math.sin(x) * 0.4), rockMat);
-      rock.position.set(x, 0.5, z);
-      rock.rotation.y = x;
-      rock.castShadow = true;
-      this.scene.add(rock);
-    }
   }
 
   private addTownBuildings(): void {
@@ -824,24 +857,72 @@ export class Renderer {
             mesh.receiveShadow = true;
           }
         });
+        
+        // Add a warm flickering point light directly inside the bonfire prop
+        if (url.includes('bonfire')) {
+          const fireLight = new THREE.PointLight(0xff6600, 3.5, 14);
+          fireLight.position.set(0, 0.6, 0);
+          fireLight.castShadow = true;
+          fireLight.shadow.bias = -0.002;
+          model.add(fireLight);
+        }
+
         this.scene.add(model);
       }, undefined, (err) => {
         console.error(`Failed to load town building ${url}:`, err);
       });
     };
 
-    // Tavern / Inn
-    loadProp('models/props/inn.glb', -12, -8, Math.PI / 2, 1.2);
-    // Blacksmith
-    loadProp('models/props/blacksmith.glb', 12, -8, -Math.PI / 2, 1.2);
-    // Well in the center
-    loadProp('models/props/well.glb', 0, -6, 0, 1.0);
-    // Bonfire
-    loadProp('models/props/bonfire.glb', 0, -2, 0, 1.0);
-    // Houses
-    loadProp('models/props/house_1.glb', -8, 12, Math.PI, 1.2);
-    loadProp('models/props/house_2.glb', 8, 12, Math.PI, 1.2);
-    loadProp('models/props/house_3.glb', 0, 18, Math.PI, 1.2);
+    // 1. Paved Town Square
+    const pavedTex = createCobblestoneTexture();
+    const pavedGeo = new THREE.PlaneGeometry(WORLD_LAYOUT.townSquare.width, WORLD_LAYOUT.townSquare.depth);
+    const pavedMat = new THREE.MeshLambertMaterial({ map: pavedTex });
+    const pavedSquare = new THREE.Mesh(pavedGeo, pavedMat);
+    pavedSquare.rotation.x = -Math.PI / 2;
+    pavedSquare.position.set(0, 0.01, -4); // offset center to match well/inn placement
+    pavedSquare.receiveShadow = true;
+    this.scene.add(pavedSquare);
+
+    // 2. Road Segments
+    const roadTex = createRoadTexture();
+    for (const road of WORLD_LAYOUT.roads) {
+      const dx = road.endX - road.startX;
+      const dz = road.endZ - road.startZ;
+      const length = Math.sqrt(dx * dx + dz * dz);
+      const angle = Math.atan2(dx, dz);
+      
+      const segmentTex = roadTex.clone();
+      segmentTex.repeat.set(1, length / road.width);
+      segmentTex.needsUpdate = true;
+
+      const roadGeo = new THREE.PlaneGeometry(road.width, length);
+      const roadMat = new THREE.MeshLambertMaterial({ map: segmentTex });
+      const roadMesh = new THREE.Mesh(roadGeo, roadMat);
+      roadMesh.rotation.x = -Math.PI / 2;
+      roadMesh.rotation.z = angle;
+      roadMesh.position.set(
+        (road.startX + road.endX) / 2,
+        0.005, // slightly below paved square
+        (road.startZ + road.endZ) / 2
+      );
+      roadMesh.receiveShadow = true;
+      this.scene.add(roadMesh);
+    }
+
+    // 3. Buildings
+    for (const b of WORLD_LAYOUT.buildings) {
+      loadProp(b.url, b.x, b.z, b.rotY, b.scale);
+    }
+
+    // 4. Props
+    for (const p of WORLD_LAYOUT.props) {
+      loadProp(p.url, p.x, p.z, p.rotY, p.scale);
+    }
+
+    // 5. Foliage / Scenery
+    for (const f of WORLD_LAYOUT.foliage) {
+      loadProp(f.url, f.x, f.z, 0, f.scale);
+    }
   }
 
   private onResize(canvas: HTMLCanvasElement): void {

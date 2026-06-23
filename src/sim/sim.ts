@@ -3,6 +3,7 @@
 // All state mutations happen here, inside tick().
 
 import { Rng } from './rng';
+import { checkCollision } from './world';
 
 // Input snapshot passed in from the game layer each tick.
 // Defined here so sim stays self-contained (no import from game/).
@@ -271,8 +272,14 @@ export class Sim {
       pdz -= Math.cos(p.facing) * MOVE_SPEED * dt * 0.6;
     }
 
-    p.x += pdx;
-    p.z += pdz;
+    const nextX = p.x + pdx;
+    if (!checkCollision(nextX, p.z, 0.65)) {
+      p.x = nextX;
+    }
+    const nextZ = p.z + pdz;
+    if (!checkCollision(p.x, nextZ, 0.65)) {
+      p.z = nextZ;
+    }
     p.moving = pdx !== 0 || pdz !== 0;
 
     // ── Mobs AI & movement ──────────────────────────────────────────
@@ -300,8 +307,26 @@ export class Sim {
       }
 
       if (m.state === 'walking') {
-        m.x += Math.sin(m.facing) * MOB_WALK_SPEED * dt;
-        m.z += Math.cos(m.facing) * MOB_WALK_SPEED * dt;
+        const mdx = Math.sin(m.facing) * MOB_WALK_SPEED * dt;
+        const mdz = Math.cos(m.facing) * MOB_WALK_SPEED * dt;
+        
+        const mNextX = m.x + mdx;
+        if (!checkCollision(mNextX, m.z, 0.65)) {
+          m.x = mNextX;
+        } else {
+          m.state = 'idle';
+          m.patrolTimer = this.rng.next() * 2;
+          m.moving = false;
+        }
+        
+        const mNextZ = m.z + mdz;
+        if (!checkCollision(m.x, mNextZ, 0.65)) {
+          m.z = mNextZ;
+        } else {
+          m.state = 'idle';
+          m.patrolTimer = this.rng.next() * 2;
+          m.moving = false;
+        }
       }
     }
   }
