@@ -1,0 +1,38 @@
+{
+  "broken_tooth": {
+    "name": "Broken Tooth",
+    "rarity": "junk",
+    "desc": "Worthless beast remains.",
+    "icon": "icon-tooth"
+  },
+  "wolf_pelt": {
+    "name": "Wolf Pelt",
+    "rarity": "common",
+    "desc": "Thick fur. Can be sold or crafted.",
+    "icon": "icon-pelt"
+  },
+  "orc_ear": {
+    "name": "Orc Ear",
+    "rarity": "common",
+    "desc": "Proof of a defeated threat.",
+    "icon": "icon-ear"
+  },
+  "healing_potion": {
+    "name": "Healing Potion",
+    "rarity": "uncommon",
+    "desc": "Restores health on use.",
+    "icon": "icon-potion"
+  },
+  "bronze_ring": {
+    "name": "Bronze Ring",
+    "rarity": "rare",
+    "desc": "A simple ring. Smells like copper.",
+    "icon": "icon-ring"
+  },
+  "desert_sand": {
+    "name": "Desert Sand",
+    "rarity": "junk",
+    "desc": "Coarse and gets everywhere.",
+    "icon": "icon-sand"
+  }
+}

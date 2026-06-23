@@ -50,6 +50,19 @@ export interface SpellCast {
   targetId: string;
 }
 
+export interface LootItem {
+  itemId: string;
+  count: number;
+}
+
+export interface LootContainer {
+  id: string;
+  x: number;
+  z: number;
+  money: number; // In copper
+  items: LootItem[];
+}
+
 export interface Player {
   id: string;
   x: number;
@@ -67,6 +80,8 @@ export interface Player {
   nextLevelExp: number;
   targetId: string | null;
   activeCast: SpellCast | null;
+  inventory: LootItem[];
+  money: number;
 }
 
 export interface Mob {
@@ -144,15 +159,19 @@ export class Sim {
     experience: 0,
     nextLevelExp: 100,
     targetId: null,
-    activeCast: null
+    activeCast: null,
+    inventory: [],
+    money: 0
   };
   readonly zone: ZoneData;
   readonly mobs: Mob[] = [];
   readonly projectiles: Projectile[] = [];
+  readonly lootContainers: LootContainer[] = [];
   combatEvents: CombatEvent[] = [];
 
   /** Index of the portal the player is currently near, or -1 if none. */
   nearPortalIndex: number = -1;
+  nearLootContainerIndex: number = -1;
 
   private nextId = 10;
 
@@ -183,6 +202,8 @@ export class Sim {
     p.stamina = from.player.stamina;
     p.maxStamina = from.player.maxStamina;
     p.facing = from.player.facing;
+    p.inventory = from.player.inventory;
+    p.money = from.player.money;
     // Place player at the spawn coordinates
     p.x = spawnX;
     p.z = spawnZ;
@@ -267,6 +288,20 @@ export class Sim {
       if (portalProximityCheck(p.x, p.z, this.zone.portals[i])) {
         this.nearPortalIndex = i;
         break;
+      }
+    }
+
+    // ── Loot Proximity Check ───────────────────────────────────────────
+    this.nearLootContainerIndex = -1;
+    let closestLootDist = 2.0;
+    for (let i = 0; i < this.lootContainers.length; i++) {
+      const lc = this.lootContainers[i];
+      const dx = lc.x - p.x;
+      const dz = lc.z - p.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      if (dist <= closestLootDist) {
+        this.nearLootContainerIndex = i;
+        closestLootDist = dist;
       }
     }
 
@@ -409,6 +444,7 @@ export class Sim {
         if (killed) {
           const xpGained = getMobXpValue(target.level);
           this.grantXp(xpGained);
+          this.spawnLoot(target.type, target.x, target.z);
           this.combatEvents.push({
             id: this.generateId('evt'),
             type: 'damage',
@@ -539,6 +575,111 @@ export class Sim {
           }
         }
       }
+    }
+  }
+
+  private spawnLoot(mobType: string, x: number, z: number): void {
+    const mobDef = MOB_REGISTRY[mobType];
+    if (!mobDef || !mobDef.lootTable) return;
+    const lt = mobDef.lootTable;
+    const droppedMoney = this.rng.int(lt.minGold, lt.maxGold);
+    const droppedItems: LootItem[] = [];
+    for (const item of lt.items) {
+      if (this.rng.next() <= item.chance) {
+        const count = this.rng.int(item.minCount, item.maxCount);
+        if (count > 0) {
+          droppedItems.push({ itemId: item.itemId, count });
+        }
+      }
+    }
+    if (droppedMoney > 0 || droppedItems.length > 0) {
+      this.lootContainers.push({
+        id: this.generateId('loot'),
+        x,
+        z,
+        money: droppedMoney,
+        items: droppedItems
+      });
+    }
+  }
+
+  lootItem(containerId: string, itemIdx: number): void {
+    const lc = this.lootContainers.find(c => c.id === containerId);
+    if (!lc) return;
+    if (itemIdx < 0 || itemIdx >= lc.items.length) return;
+    const item = lc.items[itemIdx];
+
+    // Add to player inventory
+    const invItem = this.player.inventory.find(i => i.itemId === item.itemId);
+    if (invItem) {
+      invItem.count += item.count;
+    } else {
+      this.player.inventory.push({ ...item });
+    }
+
+    // Remove from container
+    lc.items.splice(itemIdx, 1);
+
+    // Clean up empty container
+    if (lc.money === 0 && lc.items.length === 0) {
+      if (this.nearLootContainerIndex >= 0 && this.lootContainers[this.nearLootContainerIndex]?.id === containerId) {
+        this.nearLootContainerIndex = -1;
+      }
+      const idx = this.lootContainers.indexOf(lc);
+      if (idx !== -1) {
+        this.lootContainers.splice(idx, 1);
+      }
+    }
+  }
+
+  lootGold(containerId: string): void {
+    const lc = this.lootContainers.find(c => c.id === containerId);
+    if (!lc) return;
+    if (lc.money <= 0) return;
+
+    this.player.money += lc.money;
+    lc.money = 0;
+
+    // Clean up empty container
+    if (lc.items.length === 0) {
+      if (this.nearLootContainerIndex >= 0 && this.lootContainers[this.nearLootContainerIndex]?.id === containerId) {
+        this.nearLootContainerIndex = -1;
+      }
+      const idx = this.lootContainers.indexOf(lc);
+      if (idx !== -1) {
+        this.lootContainers.splice(idx, 1);
+      }
+    }
+  }
+
+  lootAll(containerId: string): void {
+    const lc = this.lootContainers.find(c => c.id === containerId);
+    if (!lc) return;
+
+    // Loot gold
+    if (lc.money > 0) {
+      this.player.money += lc.money;
+      lc.money = 0;
+    }
+
+    // Loot all items
+    for (const item of lc.items) {
+      const invItem = this.player.inventory.find(i => i.itemId === item.itemId);
+      if (invItem) {
+        invItem.count += item.count;
+      } else {
+        this.player.inventory.push({ ...item });
+      }
+    }
+    lc.items = [];
+
+    // Clean up container
+    if (this.nearLootContainerIndex >= 0 && this.lootContainers[this.nearLootContainerIndex]?.id === containerId) {
+      this.nearLootContainerIndex = -1;
+    }
+    const idx = this.lootContainers.indexOf(lc);
+    if (idx !== -1) {
+      this.lootContainers.splice(idx, 1);
     }
   }
 }

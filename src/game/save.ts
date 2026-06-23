@@ -14,6 +14,8 @@ export interface SaveGame {
   maxMana: number;
   stamina: number;
   maxStamina: number;
+  inventory?: { itemId: string; count: number }[];
+  money?: number;
 }
 
 const SAVE_KEY = 'rpgcraft-savegame';
@@ -39,6 +41,8 @@ export function saveGame(sim: Sim, currentZoneKey: string): void {
     maxMana: p.maxMana,
     stamina: p.stamina,
     maxStamina: p.maxStamina,
+    inventory: p.inventory,
+    money: p.money,
   };
 
   try {
@@ -85,4 +89,6 @@ export function applyLoadedSave(p: Sim['player'], s: SaveGame): void {
   p.maxMana      = s.maxMana          ?? 100;
   p.stamina      = s.stamina          ?? 100;
   p.maxStamina   = s.maxStamina       ?? 100;
+  p.inventory    = s.inventory        ?? [];
+  p.money        = s.money            ?? 0;
 }

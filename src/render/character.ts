@@ -21,10 +21,10 @@ const loader = new GLTFLoader();
 loader.setMeshoptDecoder(MeshoptDecoder);
 
 // Cache loaded GLTFs by URL so we only fetch each file once.
-interface CachedGltf { scene: THREE.Group; animations: THREE.AnimationClip[] }
+export interface CachedGltf { scene: THREE.Group; animations: THREE.AnimationClip[] }
 const cache = new Map<string, Promise<CachedGltf>>();
 
-function loadGlb(url: string): Promise<CachedGltf> {
+export function loadGlb(url: string): Promise<CachedGltf> {
   let p = cache.get(url);
   if (!p) {
     p = loader.loadAsync(url).then((gltf) => ({

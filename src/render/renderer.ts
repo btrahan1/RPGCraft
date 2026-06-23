@@ -5,12 +5,13 @@
 import * as THREE from 'three';
 import type { Sim } from '../sim/sim';
 import type { InputState } from '../game/input';
-import { CharacterVisual } from './character';
+import { CharacterVisual, loadGlb } from './character';
 import type { CharacterDef } from './character';
 import { WorldRenderer } from './world-renderer';
 import { Hud } from './hud';
 import { MOB_REGISTRY } from '../sim/world';
 import playerDefinitions from '../data/player_definitions.json';
+import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js';
 
 // ── Camera constants ──────────────────────────────────────────────────────
 const INITIAL_DIST  = 18;
@@ -59,6 +60,7 @@ export class Renderer {
   private camPos = new THREE.Vector3(0, 0, INITIAL_DIST);
   private targetRing: THREE.Mesh | null = null;
   private projectileVisuals = new Map<string, THREE.Mesh>();
+  private lootVisuals = new Map<string, THREE.Group>();
   private worldRenderer!: WorldRenderer;
   private hud!: Hud;
   private onResizeBound!: () => void;
@@ -141,6 +143,11 @@ export class Renderer {
     while (this.scene.children.length > 0) {
       this.scene.remove(this.scene.children[0]);
     }
+    for (const group of this.lootVisuals.values()) {
+      this.scene.remove(group);
+    }
+    this.lootVisuals.clear();
+
     this.threeRenderer.dispose();
     this.hud.dispose();
     this.mobVisuals = [];
@@ -265,6 +272,38 @@ export class Renderer {
       mesh.position.set(pr.x, 1.2, pr.z);
     }
 
+    // ── Loot visuals ───────────────────────────────────────────────────
+    const activeLoot = new Set(sim.lootContainers.map(lc => lc.id));
+    for (const [id, group] of this.lootVisuals) {
+      if (!activeLoot.has(id)) {
+        this.scene.remove(group);
+        this.lootVisuals.delete(id);
+      }
+    }
+    for (const lc of sim.lootContainers) {
+      let group = this.lootVisuals.get(lc.id);
+      if (!group) {
+        group = new THREE.Group();
+        group.position.set(lc.x, 0, lc.z);
+        this.scene.add(group);
+        this.lootVisuals.set(lc.id, group);
+
+        loadGlb('models/resources/gems_chest.glb').then(gltf => {
+          if (this.lootVisuals.has(lc.id)) {
+            const chestInstance = skeletonClone(gltf.scene);
+            chestInstance.scale.set(1.5, 1.5, 1.5);
+            chestInstance.position.set(0, 0, 0);
+            group!.add(chestInstance);
+          }
+        }).catch(err => {
+          console.warn('Failed to load chest model:', err);
+        });
+      }
+      const elapsed = performance.now() * 0.003;
+      group.position.y = Math.sin(elapsed + lc.x) * 0.08 + 0.08;
+      group.rotation.y += dt * 0.5;
+    }
+
     // ── World (campfire flicker) ─────────────────────────────────────────
     this.worldRenderer.update();
 
@@ -274,6 +313,11 @@ export class Renderer {
     this.hud.updatePortalPrompt(sim.nearPortalIndex);
     if (input.interact && sim.nearPortalIndex >= 0 && !this.hud.portalListVisible) {
       this.hud.showPortalList(sim.zone.portals);
+    }
+
+    this.hud.updateLootPrompt(sim.nearLootContainerIndex);
+    if (input.interact && sim.nearLootContainerIndex >= 0 && !this.hud.isLootOpen()) {
+      this.hud.showLootContainer(sim.lootContainers[sim.nearLootContainerIndex], sim);
     }
 
     this.hud.updatePlayer(p, this.playerVisual.height, this.camera, rendEl);

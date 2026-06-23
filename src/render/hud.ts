@@ -8,6 +8,7 @@ import type { Player, Mob, SpellCast, CombatEvent } from '../sim/sim';
 import type { PortalDef } from '../sim/world';
 import type { CharacterVisual } from './character';
 import spellDefinitions from '../data/spell_definitions.json';
+import itemDefinitions from '../data/item_definitions.json';
 
 interface DamageNumber {
   el: HTMLDivElement;
@@ -42,6 +43,11 @@ export class Hud {
   private hudMessageEl!: HTMLDivElement;
   private hudMessageTimer: ReturnType<typeof setTimeout> | null = null;
   private keyDownBound!: (e: KeyboardEvent) => void;
+  private lootPrompt!: HTMLDivElement;
+  private lootContainerEl!: HTMLDivElement;
+  private _lootVisible = false;
+  private inventoryPanel!: HTMLDivElement;
+  private _inventoryVisible = false;
 
   /** Reused across projection calls to avoid per-frame allocation. */
   private readonly proj = new THREE.Vector3();
@@ -55,14 +61,34 @@ export class Hud {
     this.buildActionBar();
     this.buildHudPanel();
     this.buildPortalUI();
+    this.buildLootUI();
+    this.buildInventoryUI();
     this.buildHudMessage();
 
-    // Close portal list on Escape (owned here since the list is our DOM)
+    // Close panels on Escape, toggle inventory on B/I
     this.keyDownBound = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && this._portalListVisible) {
-        this.portalListContainer.style.display = 'none';
-        this._portalListVisible = false;
-        e.preventDefault();
+      if (e.key === 'Escape') {
+        let handeld = false;
+        if (this._portalListVisible) {
+          this.portalListContainer.style.display = 'none';
+          this._portalListVisible = false;
+          handeld = true;
+        }
+        if (this._lootVisible) {
+          this.closeLoot();
+          handeld = true;
+        }
+        if (this._inventoryVisible) {
+          this.closeInventory();
+          handeld = true;
+        }
+        if (handeld) e.preventDefault();
+      } else if (e.code === 'KeyB' || e.code === 'KeyI' || e.key === 'b' || e.key === 'i' || e.key === 'B' || e.key === 'I') {
+        // Toggle inventory
+        if (!this._portalListVisible && !this._lootVisible) {
+          this.toggleInventory();
+          e.preventDefault();
+        }
       }
     };
     window.addEventListener('keydown', this.keyDownBound);
@@ -129,6 +155,42 @@ export class Hud {
       '.portal-list .portal-entry .portal-name{color:#fff;font-size:14px;font-weight:bold}',
       '.portal-list .portal-entry .portal-action{color:#8b5cf6;font-size:12px}',
       '.portal-list .portal-close{text-align:center;margin-top:8px;color:rgba(255,255,255,0.4);font-size:12px;cursor:pointer}',
+      '.loot-prompt{position:absolute;bottom:140px;left:50%;transform:translateX(-50%);background:rgba(10,10,20,0.9);border:2px solid #f97316;border-radius:8px;padding:8px 16px;color:#ffedd5;font-size:14px;font-weight:bold;text-align:center;z-index:15;pointer-events:none;display:none;box-shadow:0 0 20px rgba(249,115,22,0.4)}',
+      '.loot-panel{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(10,10,20,0.95);border:2px solid #f97316;border-radius:12px;padding:20px;min-width:300px;box-shadow:0 0 40px rgba(249,115,22,0.3);z-index:30;pointer-events:auto;display:none;font-family:sans-serif}',
+      '.loot-title{font-size:18px;font-weight:bold;color:#ffedd5;text-align:center;margin-bottom:12px}',
+      '.loot-gold-row{display:flex;align-items:center;justify-content:center;font-weight:bold;color:#facc15;margin-bottom:10px;font-size:14px;gap:6px}',
+      '.loot-item-list{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;margin-bottom:12px;padding-right:4px}',
+      '.loot-item-entry{display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.05);border:1px solid rgba(249,115,22,0.3);border-radius:6px;padding:8px 12px;cursor:pointer}',
+      '.loot-item-entry:hover{background:rgba(249,115,22,0.2)}',
+      '.loot-item-entry.rarity-junk{border-color:rgba(156,163,175,0.4)}',
+      '.loot-item-entry.rarity-common{border-color:rgba(255,255,255,0.4)}',
+      '.loot-item-entry.rarity-uncommon{border-color:rgba(34,197,94,0.4)}',
+      '.loot-item-entry.rarity-rare{border-color:rgba(59,130,246,0.4)}',
+      '.loot-item-entry.rarity-epic{border-color:rgba(168,85,247,0.4)}',
+      '.loot-item-name{font-size:14px;font-weight:bold}',
+      '.loot-item-name.rarity-junk{color:#9ca3af}',
+      '.loot-item-name.rarity-common{color:#fff}',
+      '.loot-item-name.rarity-uncommon{color:#22c55e}',
+      '.loot-item-name.rarity-rare{color:#3b82f6}',
+      '.loot-item-name.rarity-epic{color:#a855f7}',
+      '.loot-item-count{color:rgba(255,255,255,0.6);font-size:12px;font-family:monospace}',
+      '.loot-action-btn{width:100%;padding:10px;background:#f97316;color:#fff;border:none;border-radius:6px;font-weight:bold;cursor:pointer;margin-bottom:8px;outline:none}',
+      '.loot-action-btn:hover{background:#ea580c}',
+      '.loot-close{text-align:center;color:rgba(255,255,255,0.4);font-size:12px;cursor:pointer}',
+      '.inventory-panel{position:absolute;bottom:100px;right:16px;background:rgba(10,10,20,0.92);border:2px solid #b8860b;border-radius:8px;padding:12px;min-width:240px;box-shadow:0 6px 15px rgba(0,0,0,0.8);pointer-events:auto;font-family:sans-serif;z-index:10;display:none;flex-direction:column}',
+      '.inventory-title{font-size:14px;font-weight:bold;color:#facc15;margin-bottom:8px;border-bottom:1px solid rgba(184,134,11,0.4);padding-bottom:4px;display:flex;justify-content:space-between}',
+      '.inventory-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}',
+      '.inventory-slot{position:relative;width:48px;height:48px;background:rgba(0,0,0,0.6);border:1px solid rgba(184,134,11,0.3);border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer}',
+      '.inventory-slot:hover{border-color:#b8860b}',
+      '.inventory-slot.empty{border:1px dashed rgba(255,255,255,0.15);cursor:default}',
+      '.inventory-slot .slot-count{position:absolute;bottom:2px;right:4px;font-size:10px;color:#fff;text-shadow:1px 1px 1px #000;font-family:monospace;font-weight:bold}',
+      '.inventory-money{display:flex;align-items:center;justify-content:flex-end;gap:6px;font-size:11px;font-weight:bold;color:#e5e7eb}',
+      '.inventory-slot .icon-tooth{width:26px;height:26px;background:radial-gradient(circle,#fff,#d1d5db);border-radius:50%}',
+      '.inventory-slot .icon-pelt{width:26px;height:26px;background:radial-gradient(circle,#b45309,#78350f);border-radius:20%}',
+      '.inventory-slot .icon-ear{width:26px;height:26px;background:radial-gradient(circle,#86efac,#15803d);border-radius:40%}',
+      '.inventory-slot .icon-potion{width:26px;height:26px;background:radial-gradient(circle,#f87171,#b91c1c);border-radius:50%}',
+      '.inventory-slot .icon-ring{width:26px;height:26px;background:radial-gradient(circle,#facc15,#ca8a04);border-radius:50%;border:2px solid #78350f}',
+      '.inventory-slot .icon-sand{width:26px;height:26px;background:radial-gradient(circle,#fef08a,#eab308);border-radius:10%}',
     ].join('');
     document.head.appendChild(s);
   }
@@ -366,6 +428,7 @@ export class Hud {
     camera: THREE.Camera,
     rendEl: HTMLElement,
   ): void {
+    this.updateInventoryUI(p);
     // Static HUD panel (bottom-left)
     this.hudLevelEl.textContent = `Level ${p.level}`;
     this.hudHealthFill.style.width  = `${Math.max(0, (p.health  / p.maxHealth)  * 100)}%`;
@@ -548,4 +611,175 @@ export class Hud {
     this.damageNumbers = [];
     this.actionSlots = [];
   }
+
+  // ── Loot and Inventory UI Methods ────────────────────────────────────────
+
+  private buildLootUI(): void {
+    this.lootPrompt = document.createElement('div');
+    this.lootPrompt.className = 'loot-prompt';
+    this.lootPrompt.innerHTML = 'Press <span class="key-hint" style="color:#f97316">E</span> to open chest';
+    this.uiContainer.appendChild(this.lootPrompt);
+
+    this.lootContainerEl = document.createElement('div');
+    this.lootContainerEl.className = 'loot-panel';
+    this.lootContainerEl.style.display = 'none';
+    this.uiContainer.appendChild(this.lootContainerEl);
+  }
+
+  private buildInventoryUI(): void {
+    this.inventoryPanel = document.createElement('div');
+    this.inventoryPanel.className = 'inventory-panel';
+    this.inventoryPanel.style.display = 'none';
+    this.uiContainer.appendChild(this.inventoryPanel);
+  }
+
+  isLootOpen(): boolean { return this._lootVisible; }
+
+  updateLootPrompt(nearLootIndex: number): void {
+    this.lootPrompt.style.display =
+      (nearLootIndex >= 0 && !this._lootVisible) ? 'block' : 'none';
+  }
+
+  showLootContainer(container: any, sim: any): void {
+    this.lootPrompt.style.display = 'none';
+    this._lootVisible = true;
+    this.renderLootContainer(container, sim);
+  }
+
+  renderLootContainer(container: any, sim: any): void {
+    let html = '<div class="loot-title">Chest Contents</div>';
+    if (container.money > 0) {
+      html += `<div class="loot-gold-row">Money: ${formatMoneyHtml(container.money)}</div>`;
+    }
+    html += '<div class="loot-item-list">';
+
+    container.items.forEach((item: any, idx: number) => {
+      const def = getItemDef(item.itemId);
+      const name = def ? def.name : item.itemId;
+      const rarity = def ? def.rarity : 'common';
+      html += `<div class="loot-item-entry rarity-${rarity}" data-index="${idx}">` +
+              `<span class="loot-item-name rarity-${rarity}">${name}</span>` +
+              `<span class="loot-item-count">x${item.count}</span></div>`;
+    });
+
+    html += '</div>';
+    html += '<button class="loot-action-btn">Loot All</button>';
+    html += '<div class="loot-close">Close (Esc)</div>';
+
+    this.lootContainerEl.innerHTML = html;
+    this.lootContainerEl.style.display = 'block';
+
+    // Hook events
+    const closeBtn = this.lootContainerEl.querySelector('.loot-close');
+    if (closeBtn) closeBtn.addEventListener('click', () => this.closeLoot());
+
+    const lootAllBtn = this.lootContainerEl.querySelector('.loot-action-btn');
+    if (lootAllBtn) {
+      lootAllBtn.addEventListener('click', () => {
+        sim.lootAll(container.id);
+        this.closeLoot();
+      });
+    }
+
+    const itemEntries = this.lootContainerEl.querySelectorAll('.loot-item-entry');
+    itemEntries.forEach(entry => {
+      entry.addEventListener('click', () => {
+        const idx = parseInt((entry as HTMLElement).dataset.index ?? '0', 10);
+        sim.lootItem(container.id, idx);
+        // Refresh or close if container is now gone/looted
+        const stillExists = sim.lootContainers.find((c: any) => c.id === container.id);
+        if (stillExists) {
+          this.renderLootContainer(stillExists, sim);
+        } else {
+          this.closeLoot();
+        }
+      });
+    });
+  }
+
+  closeLoot(): void {
+    this.lootContainerEl.style.display = 'none';
+    this._lootVisible = false;
+  }
+
+  toggleInventory(): void {
+    if (this._inventoryVisible) {
+      this.closeInventory();
+    } else {
+      this.inventoryPanel.style.display = 'flex';
+      this._inventoryVisible = true;
+    }
+  }
+
+  closeInventory(): void {
+    this.inventoryPanel.style.display = 'none';
+    this._inventoryVisible = false;
+  }
+
+  updateInventoryUI(player: Player): void {
+    if (!this._inventoryVisible) return;
+
+    let html = '<div class="inventory-title"><span>Character Inventory</span><span style="cursor:pointer" id="inv-close-x">\u2715</span></div>';
+    html += '<div class="inventory-grid">';
+
+    // Grid size: 16 slots
+    for (let s = 0; s < 16; s++) {
+      const item = player.inventory[s];
+      if (item) {
+        const def = getItemDef(item.itemId);
+        const iconCls = def ? def.icon : 'icon-empty';
+        const name = def ? def.name : item.itemId;
+        const rarity = def ? def.rarity : 'common';
+        const desc = def ? def.desc : '';
+        html += `<div class="inventory-slot rarity-${rarity}" style="border-color: rgba(184,134,11,0.6)">` +
+                `<div class="${iconCls}"></div>` +
+                `<span class="slot-count">${item.count > 1 ? item.count : ''}</span>` +
+                `<div class="slot-tooltip" style="bottom: 56px; right: 0; display: none; position: absolute; background: rgba(10,10,20,0.95); border: 1px solid #b8860b; color: #fff; padding: 6px 10px; font-size: 10px; border-radius: 4px; white-space: nowrap; z-index: 50; pointer-events: none">` +
+                `<strong>${name}</strong><br><span class="rarity-${rarity}" style="font-weight:bold">${rarity.toUpperCase()}</span><br>${desc}</div>` +
+                `</div>`;
+      } else {
+        html += '<div class="inventory-slot empty"></div>';
+      }
+    }
+
+    html += '</div>';
+    html += `<div class="inventory-money">Money: ${formatMoneyHtml(player.money)}</div>`;
+
+    this.inventoryPanel.innerHTML = html;
+
+    // Hook close button on X
+    const closeX = this.inventoryPanel.querySelector('#inv-close-x');
+    if (closeX) closeX.addEventListener('click', () => this.closeInventory());
+
+    // Tooltip hovering
+    const slots = this.inventoryPanel.querySelectorAll('.inventory-slot:not(.empty)');
+    slots.forEach(slot => {
+      const tip = slot.querySelector('.slot-tooltip') as HTMLElement;
+      if (tip) {
+        slot.addEventListener('mouseenter', () => tip.style.display = 'block');
+        slot.addEventListener('mouseleave', () => tip.style.display = 'none');
+      }
+    });
+  }
+}
+
+// ── Money and Item formatting helpers ──────────────────────────────────────
+
+function formatMoneyHtml(copper: number): string {
+  if (copper <= 0) return '<span style="color:#b45309; font-family:monospace; font-weight:bold">0c</span>';
+  const p = Math.floor(copper / 1000000);
+  const g = Math.floor((copper % 1000000) / 10000);
+  const s = Math.floor((copper % 10000) / 100);
+  const c = copper % 100;
+
+  const parts: string[] = [];
+  if (p > 0) parts.push(`<span style="color:#e2e8f0; font-family:monospace; font-weight:bold">${p}p</span>`);
+  if (g > 0) parts.push(`<span style="color:#facc15; font-family:monospace; font-weight:bold">${g}g</span>`);
+  if (s > 0) parts.push(`<span style="color:#9ca3af; font-family:monospace; font-weight:bold">${s}s</span>`);
+  if (c > 0 || parts.length === 0) parts.push(`<span style="color:#b45309; font-family:monospace; font-weight:bold">${c}c</span>`);
+  return parts.join(' ');
+}
+
+function getItemDef(itemId: string): { name: string; rarity: string; desc: string; icon: string } | null {
+  return (itemDefinitions as any)[itemId] || null;
 }

@@ -43,6 +43,19 @@ export interface MobSpawn {
   z: number;
 }
 
+export interface LootTableItem {
+  itemId: string;
+  chance: number;
+  minCount: number;
+  maxCount: number;
+}
+
+export interface LootTableDef {
+  minGold: number;
+  maxGold: number;
+  items: LootTableItem[];
+}
+
 export interface MobDefinition {
   type: string;
   baseHealth: number;
@@ -52,6 +65,7 @@ export interface MobDefinition {
   modelHeight: number;
   /** Animation clip names for this rig. */
   clips: { idle: string; walk: string; run: string };
+  lootTable: LootTableDef;
 }
 
 export const MOB_REGISTRY: Record<string, MobDefinition> = mobDefinitionsData;
