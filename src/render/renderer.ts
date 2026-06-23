@@ -9,6 +9,7 @@ import { CharacterVisual } from './character';
 import type { CharacterDef } from './character';
 import { WorldRenderer } from './world-renderer';
 import { Hud } from './hud';
+import { MOB_REGISTRY } from '../sim/world';
 
 // ── Camera constants ──────────────────────────────────────────────────────
 const INITIAL_DIST  = 18;
@@ -28,20 +29,16 @@ const MAGE_DEF: CharacterDef = {
   show: ['Mage_Cape'],
   attach: { url: 'models/weapons/staff.glb', bone: 'handslot.r' },
 };
-const ORC_DEF:      CharacterDef = { url: 'models/creatures/orc.glb',      height: 2.4, clips: { idle: 'Idle', walk: 'Walk', run: 'Run' } };
-const WOLF_DEF:     CharacterDef = { url: 'models/creatures/wolf.glb',     height: 1.4, clips: { idle: 'Idle', walk: 'Walk', run: 'Run' } };
-const GOBLIN_DEF:   CharacterDef = { url: 'models/creatures/goblin.glb',   height: 1.8, clips: { idle: 'Idle', walk: 'Walk', run: 'Run' } };
-const WILD_BOAR_DEF:CharacterDef = { url: 'models/creatures/wild_boar.glb',height: 1.3, clips: { idle: 'Idle', walk: 'Walk', run: 'Run' } };
-const ALPACA_DEF:   CharacterDef = { url: 'models/creatures/alpaca.glb',   height: 2.0, clips: { idle: 'Idle', walk: 'Walk', run: 'Run' } };
-const FOX_DEF:      CharacterDef = { url: 'models/creatures/fox.glb',      height: 1.0, clips: { idle: 'Idle', walk: 'Walk', run: 'Run' } };
 
+/** Build a CharacterDef for a mob type from the data registry.
+ *  Falls back to orc if the type is unknown. */
 function defForMobType(type: string): CharacterDef {
-  if (type === 'wolf')      return WOLF_DEF;
-  if (type === 'goblin')    return GOBLIN_DEF;
-  if (type === 'wild_boar') return WILD_BOAR_DEF;
-  if (type === 'alpaca')    return ALPACA_DEF;
-  if (type === 'fox')       return FOX_DEF;
-  return ORC_DEF;
+  const def = MOB_REGISTRY[type] ?? MOB_REGISTRY['orc'];
+  return {
+    url: def.modelUrl,
+    height: def.modelHeight,
+    clips: def.clips,
+  };
 }
 
 export class Renderer {

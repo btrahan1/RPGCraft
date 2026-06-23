@@ -1,0 +1,146 @@
+{
+  "alpaca": {
+    "type": "alpaca",
+    "baseHealth": 25,
+    "baseDamage": 3,
+    "modelUrl": "models/creatures/alpaca.glb",
+    "modelHeight": 2.0,
+    "clips": { "idle": "Idle", "walk": "Walk", "run": "Run" }
+  },
+  "fox": {
+    "type": "fox",
+    "baseHealth": 35,
+    "baseDamage": 6,
+    "modelUrl": "models/creatures/fox.glb",
+    "modelHeight": 1.0,
+    "clips": { "idle": "Idle", "walk": "Walk", "run": "Run" }
+  },
+  "goblin": {
+    "type": "goblin",
+    "baseHealth": 30,
+    "baseDamage": 7,
+    "modelUrl": "models/creatures/goblin.glb",
+    "modelHeight": 1.8,
+    "clips": { "idle": "Idle", "walk": "Walk", "run": "Run" }
+  },
+  "orc": {
+    "type": "orc",
+    "baseHealth": 60,
+    "baseDamage": 10,
+    "modelUrl": "models/creatures/orc.glb",
+    "modelHeight": 2.4,
+    "clips": { "idle": "Idle", "walk": "Walk", "run": "Run" }
+  },
+  "wild_boar": {
+    "type": "wild_boar",
+    "baseHealth": 50,
+    "baseDamage": 8,
+    "modelUrl": "models/creatures/wild_boar.glb",
+    "modelHeight": 1.3,
+    "clips": { "idle": "Idle", "walk": "Walk", "run": "Run" }
+  },
+  "wolf": {
+    "type": "wolf",
+    "baseHealth": 40,
+    "baseDamage": 5,
+    "modelUrl": "models/creatures/wolf.glb",
+    "modelHeight": 1.4,
+    "clips": { "idle": "Idle", "walk": "Walk", "run": "Run" }
+  },
+  "bull": {
+    "type": "bull",
+    "baseHealth": 80,
+    "baseDamage": 12,
+    "modelUrl": "models/creatures/bull.glb",
+    "modelHeight": 2.2,
+    "clips": { "idle": "Idle", "walk": "Walk", "run": "Run" }
+  },
+  "crabenemy": {
+    "type": "crabenemy",
+    "baseHealth": 45,
+    "baseDamage": 6,
+    "modelUrl": "models/creatures/crabenemy.glb",
+    "modelHeight": 1.2,
+    "clips": { "idle": "Idle", "walk": "Walk", "run": "Run" }
+  },
+  "demon": {
+    "type": "demon",
+    "baseHealth": 120,
+    "baseDamage": 20,
+    "modelUrl": "models/creatures/demon.glb",
+    "modelHeight": 3.0,
+    "clips": { "idle": "Idle", "walk": "Walk", "run": "Run" }
+  },
+  "dragonevolved": {
+    "type": "dragonevolved",
+    "baseHealth": 200,
+    "baseDamage": 30,
+    "modelUrl": "models/creatures/dragonevolved.glb",
+    "modelHeight": 4.0,
+    "clips": { "idle": "Idle", "walk": "Walk", "run": "Run" }
+  },
+  "frog": {
+    "type": "frog",
+    "baseHealth": 20,
+    "baseDamage": 2,
+    "modelUrl": "models/creatures/frog.glb",
+    "modelHeight": 0.8,
+    "clips": { "idle": "Idle", "walk": "Walk", "run": "Run" }
+  },
+  "ghost": {
+    "type": "ghost",
+    "baseHealth": 70,
+    "baseDamage": 15,
+    "modelUrl": "models/creatures/ghost.glb",
+    "modelHeight": 2.5,
+    "clips": { "idle": "Idle", "walk": "Walk", "run": "Run" }
+  },
+  "giant": {
+    "type": "giant",
+    "baseHealth": 150,
+    "baseDamage": 25,
+    "modelUrl": "models/creatures/giant.glb",
+    "modelHeight": 4.5,
+    "clips": { "idle": "Idle", "walk": "Walk", "run": "Run" }
+  },
+  "spider": {
+    "type": "spider",
+    "baseHealth": 30,
+    "baseDamage": 5,
+    "modelUrl": "models/creatures/spider.glb",
+    "modelHeight": 1.1,
+    "clips": { "idle": "Idle", "walk": "Walk", "run": "Run" }
+  },
+  "stag": {
+    "type": "stag",
+    "baseHealth": 40,
+    "baseDamage": 4,
+    "modelUrl": "models/creatures/stag.glb",
+    "modelHeight": 2.0,
+    "clips": { "idle": "Idle", "walk": "Walk", "run": "Run" }
+  },
+  "tribal": {
+    "type": "tribal",
+    "baseHealth": 65,
+    "baseDamage": 9,
+    "modelUrl": "models/creatures/tribal.glb",
+    "modelHeight": 2.3,
+    "clips": { "idle": "Idle", "walk": "Walk", "run": "Run" }
+  },
+  "velociraptor": {
+    "type": "velociraptor",
+    "baseHealth": 55,
+    "baseDamage": 11,
+    "modelUrl": "models/creatures/velociraptor.glb",
+    "modelHeight": 1.8,
+    "clips": { "idle": "Idle", "walk": "Walk", "run": "Run" }
+  },
+  "yeti": {
+    "type": "yeti",
+    "baseHealth": 100,
+    "baseDamage": 18,
+    "modelUrl": "models/creatures/yeti.glb",
+    "modelHeight": 3.5,
+    "clips": { "idle": "Idle", "walk": "Walk", "run": "Run" }
+  }
+}
