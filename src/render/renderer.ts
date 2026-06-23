@@ -10,6 +10,7 @@ import type { CharacterDef } from './character';
 import { WorldRenderer } from './world-renderer';
 import { Hud } from './hud';
 import { MOB_REGISTRY } from '../sim/world';
+import playerDefinitions from '../data/player_definitions.json';
 
 // ── Camera constants ──────────────────────────────────────────────────────
 const INITIAL_DIST  = 18;
@@ -25,9 +26,13 @@ const CAM_LAG    = 6;
 
 // ── Character definitions ─────────────────────────────────────────────────
 const MAGE_DEF: CharacterDef = {
-  url: 'models/chars/players/mage.glb', height: 2.6,
-  show: ['Mage_Cape'],
-  attach: { url: 'models/weapons/staff.glb', bone: 'handslot.r' },
+  url: playerDefinitions.mage.modelUrl,
+  height: playerDefinitions.mage.modelHeight,
+  show: playerDefinitions.mage.showMeshes,
+  attach: playerDefinitions.mage.weapon ? {
+    url: playerDefinitions.mage.weapon.url,
+    bone: playerDefinitions.mage.weapon.bone
+  } : undefined,
 };
 
 /** Build a CharacterDef for a mob type from the data registry.

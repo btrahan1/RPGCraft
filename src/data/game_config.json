@@ -1,0 +1,20 @@
+{
+  "player": {
+    "moveSpeed": 8,
+    "turnSpeed": 3,
+    "manaRegenPerSecond": 5,
+    "levelUpHealthGain": 20,
+    "levelUpManaGain": 15,
+    "levelUpStaminaGain": 10
+  },
+  "combat": {
+    "projectileSpeed": 18,
+    "mobHealthPerLevel": 10,
+    "mobDamagePerLevel": 1,
+    "mobAttackCooldown": 1.5,
+    "mobWalkSpeed": 2.5,
+    "mobRunSpeed": 3.8,
+    "xpPerMobLevelMultiplier": 20,
+    "levelXpTable": [0, 100, 250, 500, 900, 1500, 2300, 3400, 4800, 6500]
+  }
+}

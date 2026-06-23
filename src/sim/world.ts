@@ -41,8 +41,6 @@ export interface CollisionBox {
 export interface MobSpawn {
   x: number;
   z: number;
-  health: number; // This will likely become redundant once mob definitions are fully used
-  maxHealth: number; // This will likely become redundant
 }
 
 export interface MobDefinition {

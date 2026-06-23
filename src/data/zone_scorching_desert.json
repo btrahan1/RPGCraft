@@ -1,0 +1,93 @@
+{
+  "name": "Scorching Desert",
+  "zoneKey": "scorching_desert",
+  "townSquare": {
+    "width": 28,
+    "depth": 24
+  },
+  "buildings": [
+    { "url": "models/props/inn.glb", "x": 200, "z": 192, "rotY": 1.5707963267948966, "scale": 1.1 },
+    { "url": "models/props/blacksmith.glb", "x": 212, "z": 200, "rotY": 0.0, "scale": 1.1 },
+    { "url": "models/props/tent_open.glb", "x": 196, "z": 212, "rotY": 3.141592653589793, "scale": 1.0 },
+    { "url": "models/props/tent_small.glb", "x": 204, "z": 212, "rotY": 3.141592653589793, "scale": 1.0 }
+  ],
+  "props": [
+    { "url": "models/props/well.glb", "x": 200, "z": 194, "rotY": 0.0, "scale": 1.0 },
+    { "url": "models/props/bonfire.glb", "x": 200, "z": 204, "rotY": 0.0, "scale": 1.0 },
+    { "url": "models/props/barrel.glb", "x": 194, "z": 208, "rotY": 0.3, "scale": 1.0 },
+    { "url": "models/props/crate_wooden.glb", "x": 206, "z": 208, "rotY": 0.5, "scale": 1.0 },
+    { "url": "models/props/weapon_stand.glb", "x": 205, "z": 197, "rotY": 0.5, "scale": 1.0 }
+  ],
+  "roads": [
+    { "startX": 200, "startZ": 200, "endX": 230, "endZ": 230, "width": 3.0 },
+    { "startX": 200, "startZ": 200, "endX": 170, "endZ": 230, "width": 3.0 }
+  ],
+  "colliders": [
+    { "minX": 197.2, "maxX": 202.8, "minZ": 189.2, "maxZ": 194.8 },
+    { "minX": 209.2, "maxX": 214.8, "minZ": 197.2, "maxZ": 202.8 },
+    { "minX": 193.2, "maxX": 198.8, "minZ": 209.2, "maxZ": 214.8 },
+    { "minX": 201.2, "maxX": 206.8, "minZ": 209.2, "maxZ": 214.8 },
+    { "minX": 197.2, "maxX": 202.8, "minZ": 192.2, "maxZ": 195.8 },
+    { "minX": 197.5, "maxX": 202.5, "minZ": 202.5, "maxZ": 206.5 },
+    { "minX": 192.3, "maxX": 195.7, "minZ": 206.3, "maxZ": 209.7 },
+    { "minX": 204.3, "maxX": 207.7, "minZ": 206.3, "maxZ": 209.7 },
+    { "minX": 204.0, "maxX": 206.0, "minZ": 196.0, "maxZ": 198.0 }
+  ],
+  "foliage": [
+    { "url": "models/foliage/twisted_1.glb", "x": 215, "z": 215, "scale": 1.3 },
+    { "url": "models/foliage/twisted_2.glb", "x": 188, "z": 208, "scale": 1.2 },
+    { "url": "models/foliage/twisted_3.glb", "x": 218, "z": 190, "scale": 1.3 },
+    { "url": "models/foliage/dead_1.glb", "x": 186, "z": 195, "scale": 1.1 },
+    { "url": "models/foliage/dead_2.glb", "x": 210, "z": 218, "scale": 1.2 },
+    { "url": "models/foliage/rock_1.glb", "x": 194, "z": 190, "scale": 1.4 },
+    { "url": "models/foliage/rock_2.glb", "x": 212, "z": 194, "scale": 1.5 },
+    { "url": "models/foliage/twisted_1.glb", "x": 183, "z": 200, "scale": 1.1 },
+    { "url": "models/foliage/dead_3.glb", "x": 216, "z": 210, "scale": 1.2 },
+    { "url": "models/foliage/rock_1.glb", "x": 185, "z": 213, "scale": 1.3 }
+  ],
+  "camps": [
+    {
+      "mobType": "wild_boar",
+      "minLevel": 4,
+      "maxLevel": 6,
+      "spawns": [
+        { "x": 262, "z": 262, "health": 80, "maxHealth": 80 },
+        { "x": 258, "z": 265, "health": 80, "maxHealth": 80 },
+        { "x": 265, "z": 258, "health": 80, "maxHealth": 80 },
+        { "x": 260, "z": 268, "health": 80, "maxHealth": 80 }
+      ]
+    },
+    {
+      "mobType": "alpaca",
+      "minLevel": 5,
+      "maxLevel": 7,
+      "spawns": [
+        { "x": 138, "z": 262, "health": 70, "maxHealth": 70 },
+        { "x": 135, "z": 258, "health": 70, "maxHealth": 70 },
+        { "x": 142, "z": 265, "health": 70, "maxHealth": 70 },
+        { "x": 140, "z": 268, "health": 70, "maxHealth": 70 }
+      ]
+    },
+    {
+      "mobType": "fox",
+      "minLevel": 6,
+      "maxLevel": 8,
+      "spawns": [
+        { "x": 262, "z": 138, "health": 55, "maxHealth": 55 },
+        { "x": 258, "z": 135, "health": 55, "maxHealth": 55 },
+        { "x": 265, "z": 142, "health": 55, "maxHealth": 55 },
+        { "x": 268, "z": 140, "health": 55, "maxHealth": 55 }
+      ]
+    }
+  ],
+  "portals": [
+    {
+      "label": "Starter Zone",
+      "targetZone": "starter_zone",
+      "x": 200,
+      "z": 204,
+      "spawnX": 0,
+      "spawnZ": 0
+    }
+  ]
+}

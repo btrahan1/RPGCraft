@@ -1,0 +1,11 @@
+{
+  "mage": {
+    "modelUrl": "models/chars/players/mage.glb",
+    "modelHeight": 2.6,
+    "showMeshes": ["Mage_Cape"],
+    "weapon": {
+      "url": "models/weapons/staff.glb",
+      "bone": "handslot.r"
+    }
+  }
+}

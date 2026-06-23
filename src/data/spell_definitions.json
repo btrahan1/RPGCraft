@@ -1,0 +1,22 @@
+[
+  {
+    "id": "fireball",
+    "name": "Fireball",
+    "manaCost": 15,
+    "castDuration": 1.5,
+    "damage": 25,
+    "iconClass": "icon-fireball",
+    "keybind": "1",
+    "tooltip": "1.5s, 25 dmg"
+  },
+  {
+    "id": "frostbolt",
+    "name": "Frostbolt",
+    "manaCost": 10,
+    "castDuration": 1.0,
+    "damage": 15,
+    "iconClass": "icon-frostbolt",
+    "keybind": "2",
+    "tooltip": "1.0s, 15 dmg"
+  }
+]

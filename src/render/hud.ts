@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import type { Player, Mob, SpellCast, CombatEvent } from '../sim/sim';
 import type { PortalDef } from '../sim/world';
 import type { CharacterVisual } from './character';
+import spellDefinitions from '../data/spell_definitions.json';
 
 interface DamageNumber {
   el: HTMLDivElement;
@@ -153,13 +154,17 @@ export class Hud {
   private buildActionBar(): void {
     const actionBar = document.createElement('div');
     actionBar.className = 'action-bar';
-    const spells = [
-      { k: '1', c: 'icon-fireball',  n: 'Fireball',  co: '15m', d: '1.5s, 25 dmg' },
-      { k: '2', c: 'icon-frostbolt', n: 'Frostbolt', co: '10m', d: '1.0s, 15 dmg' },
-      { k: '3', c: 'icon-empty', n: 'Empty', co: '', d: '' },
-      { k: '4', c: 'icon-empty', n: 'Empty', co: '', d: '' },
-      { k: '5', c: 'icon-empty', n: 'Empty', co: '', d: '' },
-    ];
+    const spells = spellDefinitions.map(s => ({
+      k: s.keybind,
+      c: s.iconClass,
+      n: s.name,
+      co: `${s.manaCost}m`,
+      d: s.tooltip
+    }));
+    while (spells.length < 5) {
+      const k = (spells.length + 1).toString();
+      spells.push({ k, c: 'icon-empty', n: 'Empty', co: '', d: '' });
+    }
     for (const sp of spells) {
       const slot = document.createElement('div');
       slot.className = 'action-slot' + (sp.c === 'icon-empty' ? ' disabled' : '');
@@ -472,12 +477,16 @@ export class Hud {
   /** Gray out / re-enable action slots based on target and mana. */
   updateActionSlots(player: Player, hasTarget: boolean): void {
     if (this.actionSlots[0]) {
-      if (!hasTarget || player.mana < 15) this.actionSlots[0].classList.add('disabled');
-      else                                this.actionSlots[0].classList.remove('disabled');
+      const spell = spellDefinitions.find(s => s.keybind === '1');
+      const cost = spell ? spell.manaCost : 15;
+      if (!hasTarget || player.mana < cost) this.actionSlots[0].classList.add('disabled');
+      else                                  this.actionSlots[0].classList.remove('disabled');
     }
     if (this.actionSlots[1]) {
-      if (!hasTarget || player.mana < 10) this.actionSlots[1].classList.add('disabled');
-      else                                this.actionSlots[1].classList.remove('disabled');
+      const spell = spellDefinitions.find(s => s.keybind === '2');
+      const cost = spell ? spell.manaCost : 10;
+      if (!hasTarget || player.mana < cost) this.actionSlots[1].classList.add('disabled');
+      else                                  this.actionSlots[1].classList.remove('disabled');
     }
   }
 
