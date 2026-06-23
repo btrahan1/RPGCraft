@@ -13,7 +13,7 @@ const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
 const sim = new Sim();
 const renderer = new Renderer(canvas, sim);
 
-listenInput();
+listenInput(canvas);
 
 let last = performance.now();
 

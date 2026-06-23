@@ -76,16 +76,37 @@ export class CharacterVisual {
   private async load(def: CharacterDef): Promise<void> {
     const clipNames = { ...KAYKIT_CLIPS, ...def.clips };
 
-    // Load and clone -- clone gives this instance its own independent skeleton
-    const { scene: source, animations } = await loadGlb(def.url);
-    const model = skeletonClone(source) as THREE.Group;
+    try {
+      // Load and clone -- clone gives this instance its own independent skeleton
+      const { scene: source, animations } = await loadGlb(def.url);
+      const model = skeletonClone(source) as THREE.Group;
 
-    // Normalize scale so the model is exactly def.height tall, feet at y=0
-    const box = new THREE.Box3().setFromObject(model);
-    const modelH = box.max.y - box.min.y;
-    const normScale = modelH > 0 ? def.height / modelH : 1;
-    model.scale.setScalar(normScale);
-    model.position.y = -box.min.y * normScale;
+      // Normalize scale so the model is exactly def.height tall, feet at y=0.
+      // Calculate bounding box directly from mesh vertices (with bone transforms) to avoid armature/helper skewing.
+      model.updateMatrixWorld(true);
+      const box = new THREE.Box3();
+      const tempV = new THREE.Vector3();
+      model.traverse((o) => {
+        const mesh = o as THREE.Mesh;
+        if (mesh.isMesh) {
+          const pos = mesh.geometry.getAttribute('position');
+          if (pos) {
+            for (let i = 0; i < pos.count; i++) {
+              tempV.fromBufferAttribute(pos as THREE.BufferAttribute, i);
+              if ((mesh as THREE.SkinnedMesh).isSkinnedMesh) {
+                (mesh as THREE.SkinnedMesh).applyBoneTransform(i, tempV);
+              }
+              tempV.applyMatrix4(mesh.matrixWorld);
+              box.expandByPoint(tempV);
+            }
+          }
+        }
+      });
+
+      const modelH = box.max.y - box.min.y;
+      const normScale = modelH > 0 ? def.height / modelH : 1;
+      model.scale.setScalar(normScale);
+      model.position.y = -box.min.y * normScale;
 
     // Show/hide accessories (KayKit ships all accessories in one GLB)
     if (def.show !== undefined) {
@@ -146,7 +167,10 @@ export class CharacterVisual {
       this.currentAction = this.idleAction;
     }
 
-    this.ready = true;
+      this.ready = true;
+    } catch (err) {
+      console.error(`CharacterVisual: failed to load model '${def.url}':`, err);
+    }
   }
 
   update(dt: number, state: AnimState): void {
