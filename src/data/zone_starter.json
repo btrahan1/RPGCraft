@@ -120,7 +120,10 @@
       "dialogue": [
         "Welcome to my forge, Mage! The embers are hot and the iron is strong.",
         "If you ever need your staff polished or find some ores in your travels, you know where to find me!"
-      ]
+      ],
+      "shop": {
+        "items": ["iron_sword", "sturdy_shield", "bronze_ring"]
+      }
     },
     {
       "id": "npc_eldon",
@@ -133,7 +136,10 @@
       "dialogue": [
         "Ah, a traveler! Step in from the cold and rest your weary feet.",
         "We serve the finest mead in Oakvale. Take a seat by the hearth!"
-      ]
+      ],
+      "shop": {
+        "items": ["healing_potion", "mana_potion"]
+      }
     },
     {
       "id": "npc_caleb",

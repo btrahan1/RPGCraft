@@ -96,6 +96,10 @@ export interface PortalDef {
   spawnZ: number;
 }
 
+export interface ShopDef {
+  items: string[];
+}
+
 export interface NpcDef {
   id: string;
   name: string;
@@ -105,6 +109,7 @@ export interface NpcDef {
   z: number;
   rotY: number;
   dialogue: string[];
+  shop?: ShopDef;
 }
 
 export interface ZoneData {

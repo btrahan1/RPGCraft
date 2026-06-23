@@ -53,6 +53,10 @@ export class Hud {
   private _dialogueVisible = false;
   private currentDialoguePage = 0;
   private activeDialogueNpc: any = null;
+  private shopPanel!: HTMLDivElement;
+  private _shopVisible = false;
+  private activeShopNpc: any = null;
+  private sim: any = null;
 
   /** Reused across projection calls to avoid per-frame allocation. */
   private readonly proj = new THREE.Vector3();
@@ -69,6 +73,7 @@ export class Hud {
     this.buildLootUI();
     this.buildInventoryUI();
     this.buildNpcUI();
+    this.buildShopUI();
     this.buildHudMessage();
 
     // Close panels on Escape, toggle inventory on B/I
@@ -88,6 +93,10 @@ export class Hud {
           this.closeDialogue();
           handeld = true;
         }
+        if (this._shopVisible) {
+          this.closeShop();
+          handeld = true;
+        }
         if (this._inventoryVisible) {
           this.closeInventory();
           handeld = true;
@@ -95,7 +104,7 @@ export class Hud {
         if (handeld) e.preventDefault();
       } else if (e.code === 'KeyB' || e.code === 'KeyI' || e.key === 'b' || e.key === 'i' || e.key === 'B' || e.key === 'I') {
         // Toggle inventory
-        if (!this._portalListVisible && !this._lootVisible) {
+        if (!this._portalListVisible && !this._lootVisible && !this._shopVisible) {
           this.toggleInventory();
           e.preventDefault();
         }
@@ -199,6 +208,9 @@ export class Hud {
       '.inventory-slot .icon-pelt{width:26px;height:26px;background:radial-gradient(circle,#b45309,#78350f);border-radius:20%}',
       '.inventory-slot .icon-ear{width:26px;height:26px;background:radial-gradient(circle,#86efac,#15803d);border-radius:40%}',
       '.inventory-slot .icon-potion{width:26px;height:26px;background:radial-gradient(circle,#f87171,#b91c1c);border-radius:50%}',
+      '.inventory-slot .icon-potion-blue{width:26px;height:26px;background:radial-gradient(circle,#60a5fa,#1d4ed8);border-radius:50%}',
+      '.inventory-slot .icon-sword{width:26px;height:26px;background:radial-gradient(circle,#cbd5e1,#475569);border-radius:4px}',
+      '.inventory-slot .icon-shield{width:26px;height:26px;background:radial-gradient(circle,#fbbf24,#b45309);clip-path:polygon(50% 0%, 100% 25%, 80% 80%, 50% 100%, 20% 80%, 0% 25%)}',
       '.inventory-slot .icon-ring{width:26px;height:26px;background:radial-gradient(circle,#facc15,#ca8a04);border-radius:50%;border:2px solid #78350f}',
       '.inventory-slot .icon-sand{width:26px;height:26px;background:radial-gradient(circle,#fef08a,#eab308);border-radius:10%}',
       '.dialogue-panel{position:absolute;bottom:120px;left:50%;transform:translateX(-50%);background:rgba(10,10,20,0.95);border:2px solid #22c55e;border-radius:12px;padding:18px 24px;width:440px;box-shadow:0 6px 25px rgba(0,0,0,0.8);z-index:30;pointer-events:auto;display:none;flex-direction:column;color:#fff}',
@@ -208,6 +220,18 @@ export class Hud {
       '.dialogue-footer{display:flex;justify-content:flex-end;gap:10px}',
       '.dialogue-btn{padding:6px 16px;background:#22c55e;color:#fff;border:none;border-radius:4px;font-weight:bold;cursor:pointer;font-size:12px;outline:none}',
       '.dialogue-btn:hover{background:#16a34a}',
+      '.shop-panel{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(10,10,20,0.96);border:2px solid #ffd700;border-radius:12px;padding:20px;width:580px;box-shadow:0 10px 30px rgba(0,0,0,0.9);z-index:30;pointer-events:auto;display:none;flex-direction:column;font-family:sans-serif;color:#fff}',
+      '.shop-header{font-size:16px;font-weight:bold;color:#ffd700;text-align:center;margin-bottom:12px;border-bottom:1px solid rgba(255,215,0,0.4);padding-bottom:6px;display:flex;justify-content:space-between;align-items:center}',
+      '.shop-body{display:flex;gap:20px;flex:1}',
+      '.shop-merchant-side{flex:1.2;display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,0.1);padding-right:16px}',
+      '.shop-player-side{flex:1;display:flex;flex-direction:column}',
+      '.shop-section-title{font-size:11px;font-weight:bold;color:rgba(255,255,255,0.7);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px}',
+      '.shop-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-height:240px;overflow-y:auto;padding-right:4px}',
+      '.shop-slot{position:relative;background:rgba(0,0,0,0.6);border:1px solid rgba(255,215,0,0.2);border-radius:6px;padding:6px;display:flex;flex-direction:column;align-items:center;cursor:pointer;text-align:center;min-height:90px;justify-content:space-between}',
+      '.shop-slot:hover{border-color:#ffd700;background:rgba(255,215,0,0.05)}',
+      '.shop-slot-name{font-size:10px;font-weight:bold;color:#fff;margin-top:4px;word-break:break-word}',
+      '.shop-slot-price{font-size:9px;margin-top:2px}',
+      '.shop-close{text-align:center;margin-top:14px;color:rgba(255,255,255,0.4);font-size:12px;cursor:pointer}',
     ].join('');
     document.head.appendChild(s);
   }
@@ -731,11 +755,12 @@ export class Hud {
     }
   }
 
-  showDialogue(npc: any): void {
+  showDialogue(npc: any, sim: any): void {
     this.npcPrompt.style.display = 'none';
     this._dialogueVisible = true;
     this.activeDialogueNpc = npc;
     this.currentDialoguePage = 0;
+    this.sim = sim;
     this.renderDialogue();
   }
 
@@ -749,20 +774,33 @@ export class Hud {
     let html = `<div class="dialogue-title">${npc.name}</div>`;
     html += `<div class="dialogue-subtitle">${npc.title}</div>`;
     html += `<div class="dialogue-text">${pageText}</div>`;
-    html += `<div class="dialogue-footer"><button class="dialogue-btn">${isLastPage ? 'Close (Esc)' : 'Next'}</button></div>`;
+    
+    html += `<div class="dialogue-footer">`;
+    if (npc.shop) {
+      html += `<button class="dialogue-btn shop-trade-btn" style="background:#ffd700; color:#000; margin-right:auto">Trade</button>`;
+    }
+    html += `<button class="dialogue-btn dialogue-next-btn">${isLastPage ? 'Close (Esc)' : 'Next'}</button>`;
+    html += `</div>`;
 
     this.dialogueContainerEl.innerHTML = html;
     this.dialogueContainerEl.style.display = 'flex';
 
-    const btn = this.dialogueContainerEl.querySelector('.dialogue-btn');
-    if (btn) {
-      btn.addEventListener('click', () => {
+    const nextBtn = this.dialogueContainerEl.querySelector('.dialogue-next-btn');
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
         if (isLastPage) {
           this.closeDialogue();
         } else {
           this.currentDialoguePage++;
           this.renderDialogue();
         }
+      });
+    }
+
+    const tradeBtn = this.dialogueContainerEl.querySelector('.shop-trade-btn');
+    if (tradeBtn) {
+      tradeBtn.addEventListener('click', () => {
+        this.showShop(npc, this.sim);
       });
     }
   }
@@ -895,6 +933,144 @@ export class Hud {
     });
   }
 
+  private buildShopUI(): void {
+    this.shopPanel = document.createElement('div');
+    this.shopPanel.className = 'shop-panel';
+    this.shopPanel.style.display = 'none';
+    this.uiContainer.appendChild(this.shopPanel);
+  }
+
+  isShopOpen(): boolean { return this._shopVisible; }
+
+  showShop(npc: any, sim: any): void {
+    this.closeDialogue();
+    this.closeInventory();
+    this._shopVisible = true;
+    this.activeShopNpc = npc;
+    this.sim = sim;
+    this.renderShop();
+  }
+
+  closeShop(): void {
+    this.shopPanel.style.display = 'none';
+    this._shopVisible = false;
+    this.activeShopNpc = null;
+  }
+
+  renderShop(): void {
+    const npc = this.activeShopNpc;
+    const sim = this.sim;
+    if (!npc || !sim) return;
+
+    const player = sim.player;
+
+    let html = `<div class="shop-header">`;
+    html += `<span>Trade: ${npc.name}</span>`;
+    html += `<span style="cursor:pointer" id="shop-close-x">\u2715</span>`;
+    html += `</div>`;
+
+    html += `<div class="shop-body">`;
+
+    // LEFT SIDE: MERCHANT WARES
+    html += `<div class="shop-merchant-side">`;
+    html += `<div class="shop-section-title">Merchant Goods</div>`;
+    html += `<div class="shop-grid">`;
+    npc.shop.items.forEach((itemId: string) => {
+      const def = getItemDef(itemId);
+      if (def) {
+        const cost = def.value || 0;
+        const iconCls = def.icon;
+        const name = def.name;
+        const rarity = def.rarity;
+        const costHtml = formatMoneyHtml(cost);
+        html += `<div class="shop-slot buy-item-btn rarity-${rarity}" data-id="${itemId}" style="border-color: rgba(255,215,0,0.4)">` +
+                `<div class="${iconCls}"></div>` +
+                `<div class="shop-slot-name">${name}</div>` +
+                `<div class="shop-slot-price">${costHtml}</div>` +
+                `</div>`;
+      }
+    });
+    html += `</div>`; // end shop-grid
+    html += `</div>`; // end merchant-side
+
+    // RIGHT SIDE: PLAYER INVENTORY
+    html += `<div class="shop-player-side">`;
+    html += `<div class="shop-section-title">Your Bag (Click to Sell)</div>`;
+    html += `<div class="inventory-grid" style="grid-template-columns: repeat(4, 1fr)">`;
+    for (let s = 0; s < 16; s++) {
+      const item = player.inventory[s];
+      if (item) {
+        const def = getItemDef(item.itemId);
+        const iconCls = def ? def.icon : 'icon-empty';
+        const name = def ? def.name : item.itemId;
+        const rarity = def ? def.rarity : 'common';
+        const sellPrice = def ? Math.floor((def.value || 0) * 0.5) : 0;
+        const sellHtml = formatMoneyHtml(sellPrice);
+        html += `<div class="inventory-slot sell-item-btn rarity-${rarity}" data-index="${s}" style="border-color: rgba(184,134,11,0.6)">` +
+                `<div class="${iconCls}"></div>` +
+                `<span class="slot-count">${item.count > 1 ? item.count : ''}</span>` +
+                `<div class="slot-tooltip" style="bottom: 56px; right: 0; display: none; position: absolute; background: rgba(10,10,20,0.95); border: 1px solid #b8860b; color: #fff; padding: 6px 10px; font-size: 10px; border-radius: 4px; white-space: nowrap; z-index: 50; pointer-events: none">` +
+                `<strong>${name}</strong><br>Sells for: ${sellHtml}</div>` +
+                `</div>`;
+      } else {
+        html += `<div class="inventory-slot empty"></div>`;
+      }
+    }
+    html += `</div>`; // end inventory-grid
+    html += `<div class="inventory-money" style="margin-top:auto">Your Money: ${formatMoneyHtml(player.money)}</div>`;
+    html += `</div>`; // end player-side
+
+    html += `</div>`; // end shop-body
+
+    html += `<div class="shop-close" id="shop-close-btn">Close Shop (Esc)</div>`;
+
+    this.shopPanel.innerHTML = html;
+    this.shopPanel.style.display = 'flex';
+
+    // Click events
+    const closeX = this.shopPanel.querySelector('#shop-close-x');
+    if (closeX) closeX.addEventListener('click', () => this.closeShop());
+    const closeBtn = this.shopPanel.querySelector('#shop-close-btn');
+    if (closeBtn) closeBtn.addEventListener('click', () => this.closeShop());
+
+    // Buy item handlers
+    const buyBtns = this.shopPanel.querySelectorAll('.buy-item-btn');
+    buyBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const itemId = (btn as HTMLElement).dataset.id ?? '';
+        const success = sim.buyItem(npc.id, itemId);
+        if (success) {
+          this.showMessage(`Bought ${getItemDef(itemId)?.name}`, 2000, '#22c55e');
+          this.renderShop();
+        } else {
+          this.showMessage('Cannot purchase item (not enough money or bag is full)', 2500, '#ef4444');
+        }
+      });
+    });
+
+    // Sell item handlers
+    const sellBtns = this.shopPanel.querySelectorAll('.sell-item-btn');
+    sellBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt((btn as HTMLElement).dataset.index ?? '0', 10);
+        const item = player.inventory[idx];
+        if (!item) return;
+        const itemName = getItemDef(item.itemId)?.name ?? item.itemId;
+        const success = sim.sellItem(npc.id, idx);
+        if (success) {
+          this.showMessage(`Sold ${itemName}`, 2000, '#eab308');
+          this.renderShop();
+        }
+      });
+      // Tooltip hovering
+      const tip = btn.querySelector('.slot-tooltip') as HTMLElement;
+      if (tip) {
+        btn.addEventListener('mouseenter', () => tip.style.display = 'block');
+        btn.addEventListener('mouseleave', () => tip.style.display = 'none');
+      }
+    });
+  }
+
   /** Update friendly NPC nameplates. */
   updateNpcs(
     npcs: any[],
@@ -956,6 +1132,6 @@ function formatMoneyHtml(copper: number): string {
   return parts.join(' ');
 }
 
-function getItemDef(itemId: string): { name: string; rarity: string; desc: string; icon: string } | null {
+function getItemDef(itemId: string): { name: string; rarity: string; desc: string; icon: string; value?: number } | null {
   return (itemDefinitions as any)[itemId] || null;
 }

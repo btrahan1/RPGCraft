@@ -348,7 +348,7 @@ export class Renderer {
 
     this.hud.updateNpcPrompt(sim.nearNpcIndex, sim.zone.npcs);
     if (input.interact && sim.nearNpcIndex >= 0 && !this.hud.isDialogueOpen()) {
-      this.hud.showDialogue(sim.zone.npcs[sim.nearNpcIndex]);
+      this.hud.showDialogue(sim.zone.npcs[sim.nearNpcIndex], sim);
     }
 
     this.hud.updatePlayer(p, this.playerVisual.height, this.camera, rendEl);

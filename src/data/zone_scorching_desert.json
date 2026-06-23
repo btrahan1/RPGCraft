@@ -115,7 +115,10 @@
       "dialogue": [
         "Greetings, traveler! I carry rare goods from across the Scorching Desert.",
         "Take a look, but touch with care. The desert wind makes the items fragile!"
-      ]
+      ],
+      "shop": {
+        "items": ["healing_potion", "mana_potion", "bronze_ring"]
+      }
     },
     {
       "id": "npc_zarek",
@@ -128,7 +131,10 @@
       "dialogue": [
         "Hmph. What do you want, mage? Looking for steel that doesn't melt in this sun?",
         "My forge burns hotter than the desert. Speak quickly or let me work."
-      ]
+      ],
+      "shop": {
+        "items": ["iron_sword", "sturdy_shield"]
+      }
     },
     {
       "id": "npc_marra",
@@ -141,7 +147,10 @@
       "dialogue": [
         "Welcome to the Oasis Tavern! Water is free, but the cold brews will cost you copper.",
         "Rest as long as you like. The desert outside is unforgiving."
-      ]
+      ],
+      "shop": {
+        "items": ["healing_potion", "mana_potion"]
+      }
     }
   ]
 }

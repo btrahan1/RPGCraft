@@ -3,36 +3,63 @@
     "name": "Broken Tooth",
     "rarity": "junk",
     "desc": "Worthless beast remains.",
-    "icon": "icon-tooth"
+    "icon": "icon-tooth",
+    "value": 10
   },
   "wolf_pelt": {
     "name": "Wolf Pelt",
     "rarity": "common",
     "desc": "Thick fur. Can be sold or crafted.",
-    "icon": "icon-pelt"
+    "icon": "icon-pelt",
+    "value": 30
   },
   "orc_ear": {
     "name": "Orc Ear",
     "rarity": "common",
     "desc": "Proof of a defeated threat.",
-    "icon": "icon-ear"
+    "icon": "icon-ear",
+    "value": 50
   },
   "healing_potion": {
     "name": "Healing Potion",
     "rarity": "uncommon",
     "desc": "Restores health on use.",
-    "icon": "icon-potion"
+    "icon": "icon-potion",
+    "value": 200
+  },
+  "mana_potion": {
+    "name": "Mana Potion",
+    "rarity": "uncommon",
+    "desc": "Restores mana on use.",
+    "icon": "icon-potion-blue",
+    "value": 200
+  },
+  "iron_sword": {
+    "name": "Iron Sword",
+    "rarity": "common",
+    "desc": "A sturdy iron blade.",
+    "icon": "icon-sword",
+    "value": 1500
+  },
+  "sturdy_shield": {
+    "name": "Sturdy Shield",
+    "rarity": "common",
+    "desc": "Protects against incoming blows.",
+    "icon": "icon-shield",
+    "value": 1200
   },
   "bronze_ring": {
     "name": "Bronze Ring",
     "rarity": "rare",
     "desc": "A simple ring. Smells like copper.",
-    "icon": "icon-ring"
+    "icon": "icon-ring",
+    "value": 1000
   },
   "desert_sand": {
     "name": "Desert Sand",
     "rarity": "junk",
     "desc": "Coarse and gets everywhere.",
-    "icon": "icon-sand"
+    "icon": "icon-sand",
+    "value": 5
   }
 }

@@ -8,6 +8,7 @@ import starterZone from '../data/zone_starter.json';
 import scorchingDesert from '../data/zone_scorching_desert.json';
 import gameConfig from '../data/game_config.json';
 import spellDefinitions from '../data/spell_definitions.json';
+import itemDefinitions from '../data/item_definitions.json';
 
 // ── Zone Registry ────────────────────────────────────────────────────────
 const ZONE_REGISTRY: Record<string, ZoneData> = {
@@ -696,5 +697,70 @@ export class Sim {
     if (idx !== -1) {
       this.lootContainers.splice(idx, 1);
     }
+  }
+
+  buyItem(npcId: string, itemId: string): boolean {
+    const npc = this.zone.npcs.find(n => n.id === npcId);
+    if (!npc || !npc.shop) return false;
+
+    // Proximity check (must be near the NPC)
+    const dx = npc.x - this.player.x;
+    const dz = npc.z - this.player.z;
+    if (dx * dx + dz * dz > 3.5 * 3.5) return false; // 3.5 units max distance
+
+    // Check if NPC sells the item
+    if (!npc.shop.items.includes(itemId)) return false;
+
+    // Get item price
+    const itemDef = (itemDefinitions as any)[itemId];
+    if (!itemDef) return false;
+    const cost = itemDef.value || 0;
+
+    // Check player money
+    if (this.player.money < cost) return false;
+
+    // Check inventory capacity (max 16 items)
+    const existing = this.player.inventory.find(i => i.itemId === itemId);
+    if (!existing) {
+      if (this.player.inventory.length >= 16) return false;
+      this.player.inventory.push({ itemId, count: 1 });
+    } else {
+      existing.count += 1;
+    }
+
+    // Deduct money
+    this.player.money -= cost;
+    return true;
+  }
+
+  sellItem(npcId: string, itemIdx: number): boolean {
+    const npc = this.zone.npcs.find(n => n.id === npcId);
+    if (!npc || !npc.shop) return false;
+
+    // Proximity check
+    const dx = npc.x - this.player.x;
+    const dz = npc.z - this.player.z;
+    if (dx * dx + dz * dz > 3.5 * 3.5) return false;
+
+    // Check valid slot
+    if (itemIdx < 0 || itemIdx >= this.player.inventory.length) return false;
+    const item = this.player.inventory[itemIdx];
+    if (!item) return false;
+
+    // Get item sell price (50% of value)
+    const itemDef = (itemDefinitions as any)[item.itemId];
+    const baseValue = itemDef ? itemDef.value || 0 : 0;
+    const sellValue = Math.floor(baseValue * 0.5);
+
+    // Give player money
+    this.player.money += sellValue;
+
+    // Decrement or remove item
+    if (item.count > 1) {
+      item.count -= 1;
+    } else {
+      this.player.inventory.splice(itemIdx, 1);
+    }
+    return true;
   }
 }
