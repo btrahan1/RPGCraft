@@ -92,18 +92,18 @@ export class Sim {
     activeCast: null
   };
   readonly mobs: Mob[] = [
-    // Orc Camp
-    { id: 'mob_1', type: 'orc', x: 24, z: 24, facing: 0, moving: false, health: 60, maxHealth: 60, patrolTimer: 2, state: 'idle' },
-    { id: 'mob_2', type: 'orc', x: 27, z: 21, facing: 0, moving: false, health: 60, maxHealth: 60, patrolTimer: 1.5, state: 'idle' },
-    { id: 'mob_3', type: 'orc', x: 21, z: 27, facing: 0, moving: false, health: 60, maxHealth: 60, patrolTimer: 2.5, state: 'idle' },
-    // Wolf Camp
-    { id: 'mob_4', type: 'wolf', x: -30, z: -30, facing: 0, moving: false, health: 40, maxHealth: 40, patrolTimer: 1.8, state: 'idle' },
-    { id: 'mob_5', type: 'wolf', x: -33, z: -27, facing: 0, moving: false, health: 40, maxHealth: 40, patrolTimer: 2.2, state: 'idle' },
-    { id: 'mob_6', type: 'wolf', x: -27, z: -33, facing: 0, moving: false, health: 40, maxHealth: 40, patrolTimer: 1.2, state: 'idle' },
-    // Goblin Camp
-    { id: 'mob_7', type: 'goblin', x: 36, z: -36, facing: 0, moving: false, health: 50, maxHealth: 50, patrolTimer: 2.1, state: 'idle' },
-    { id: 'mob_8', type: 'goblin', x: 39, z: -33, facing: 0, moving: false, health: 50, maxHealth: 50, patrolTimer: 1.7, state: 'idle' },
-    { id: 'mob_9', type: 'goblin', x: 33, z: -39, facing: 0, moving: false, health: 50, maxHealth: 50, patrolTimer: 2.8, state: 'idle' }
+    // Orc Camp (48, 48) - Adjusted to avoid tents and weapon stand
+    { id: 'mob_1', type: 'orc', x: 48, z: 45, facing: 0, moving: false, health: 60, maxHealth: 60, patrolTimer: 2, state: 'idle' },
+    { id: 'mob_2', type: 'orc', x: 45, z: 49, facing: 0, moving: false, health: 60, maxHealth: 60, patrolTimer: 1.5, state: 'idle' },
+    { id: 'mob_3', type: 'orc', x: 51, z: 51, facing: 0, moving: false, health: 60, maxHealth: 60, patrolTimer: 2.5, state: 'idle' },
+    // Wolf Camp (-60, -60) - Adjusted to avoid large rocks
+    { id: 'mob_4', type: 'wolf', x: -60, z: -60, facing: 0, moving: false, health: 40, maxHealth: 40, patrolTimer: 1.8, state: 'idle' },
+    { id: 'mob_5', type: 'wolf', x: -63, z: -63, facing: 0, moving: false, health: 40, maxHealth: 40, patrolTimer: 2.2, state: 'idle' },
+    { id: 'mob_6', type: 'wolf', x: -57, z: -57, facing: 0, moving: false, health: 40, maxHealth: 40, patrolTimer: 1.2, state: 'idle' },
+    // Goblin Camp (72, -72) - Adjusted to avoid small tents
+    { id: 'mob_7', type: 'goblin', x: 72, z: -72, facing: 0, moving: false, health: 50, maxHealth: 50, patrolTimer: 2.1, state: 'idle' },
+    { id: 'mob_8', type: 'goblin', x: 75, z: -75, facing: 0, moving: false, health: 50, maxHealth: 50, patrolTimer: 1.7, state: 'idle' },
+    { id: 'mob_9', type: 'goblin', x: 69, z: -69, facing: 0, moving: false, health: 50, maxHealth: 50, patrolTimer: 2.8, state: 'idle' }
   ];
   readonly projectiles: Projectile[] = [];
   combatEvents: CombatEvent[] = [];
