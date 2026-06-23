@@ -3,7 +3,8 @@
 // All state mutations happen here, inside tick().
 
 import { Rng } from './rng';
-import { checkCollision } from './world';
+import { checkCollision, type ZoneData } from './world';
+import starterZone from '../data/zone_starter.json';
 
 // Input snapshot passed in from the game layer each tick.
 // Defined here so sim stays self-contained (no import from game/).
@@ -50,7 +51,8 @@ export interface Mob {
   health: number;
   maxHealth: number;
   patrolTimer: number; // time left in current AI state
-  state: 'idle' | 'walking';
+  state: 'idle' | 'walking' | 'chasing';
+  attackCooldown: number;
 }
 
 export interface Projectile {
@@ -91,24 +93,38 @@ export class Sim {
     targetId: null,
     activeCast: null
   };
-  readonly mobs: Mob[] = [
-    // Orc Camp (48, 48) - Adjusted to avoid tents and weapon stand
-    { id: 'mob_1', type: 'orc', x: 48, z: 45, facing: 0, moving: false, health: 60, maxHealth: 60, patrolTimer: 2, state: 'idle' },
-    { id: 'mob_2', type: 'orc', x: 45, z: 49, facing: 0, moving: false, health: 60, maxHealth: 60, patrolTimer: 1.5, state: 'idle' },
-    { id: 'mob_3', type: 'orc', x: 51, z: 51, facing: 0, moving: false, health: 60, maxHealth: 60, patrolTimer: 2.5, state: 'idle' },
-    // Wolf Camp (-60, -60) - Adjusted to avoid large rocks
-    { id: 'mob_4', type: 'wolf', x: -60, z: -60, facing: 0, moving: false, health: 40, maxHealth: 40, patrolTimer: 1.8, state: 'idle' },
-    { id: 'mob_5', type: 'wolf', x: -63, z: -63, facing: 0, moving: false, health: 40, maxHealth: 40, patrolTimer: 2.2, state: 'idle' },
-    { id: 'mob_6', type: 'wolf', x: -57, z: -57, facing: 0, moving: false, health: 40, maxHealth: 40, patrolTimer: 1.2, state: 'idle' },
-    // Goblin Camp (72, -72) - Adjusted to avoid small tents
-    { id: 'mob_7', type: 'goblin', x: 72, z: -72, facing: 0, moving: false, health: 50, maxHealth: 50, patrolTimer: 2.1, state: 'idle' },
-    { id: 'mob_8', type: 'goblin', x: 75, z: -75, facing: 0, moving: false, health: 50, maxHealth: 50, patrolTimer: 1.7, state: 'idle' },
-    { id: 'mob_9', type: 'goblin', x: 69, z: -69, facing: 0, moving: false, health: 50, maxHealth: 50, patrolTimer: 2.8, state: 'idle' }
-  ];
+  readonly zone: ZoneData;
+  readonly mobs: Mob[] = [];
   readonly projectiles: Projectile[] = [];
   combatEvents: CombatEvent[] = [];
 
   private nextId = 10; // For generating unique IDs
+
+  constructor(zone: ZoneData = starterZone as unknown as ZoneData) {
+    this.zone = zone;
+    
+    // Dynamically spawn mobs from the zone camp configuration
+    let mobIndex = 1;
+    for (const camp of this.zone.camps) {
+      for (const spawn of camp.spawns) {
+        // Stagger patrol timers using deterministic RNG
+        const patrolTimer = 1.0 + this.rng.next() * 1.8;
+        this.mobs.push({
+          id: `mob_${mobIndex++}`,
+          type: camp.mobType,
+          x: spawn.x,
+          z: spawn.z,
+          facing: 0,
+          moving: false,
+          health: spawn.health,
+          maxHealth: spawn.maxHealth,
+          patrolTimer: patrolTimer,
+          state: 'idle',
+          attackCooldown: 0
+        });
+      }
+    }
+  }
 
   private generateId(prefix: string): string {
     return `${prefix}_${this.nextId++}`;
@@ -137,6 +153,7 @@ export class Sim {
         maxHealth: 60,
         patrolTimer: this.rng.next() * 2 + 1, // 1 to 3 seconds
         state: 'idle',
+        attackCooldown: 0
       });
     }
 
@@ -237,6 +254,10 @@ export class Sim {
       if (distance <= step) {
         // Impact!
         target.health = Math.max(0, target.health - proj.damage);
+        if (target.health > 0) {
+          target.state = 'chasing';
+          target.moving = true;
+        }
         
         // Push combat event
         this.combatEvents.push({
@@ -273,11 +294,11 @@ export class Sim {
     }
 
     const nextX = p.x + pdx;
-    if (!checkCollision(nextX, p.z, 0.65)) {
+    if (!checkCollision(nextX, p.z, this.zone.colliders, 0.65)) {
       p.x = nextX;
     }
     const nextZ = p.z + pdz;
-    if (!checkCollision(p.x, nextZ, 0.65)) {
+    if (!checkCollision(p.x, nextZ, this.zone.colliders, 0.65)) {
       p.z = nextZ;
     }
     p.moving = pdx !== 0 || pdz !== 0;
@@ -290,42 +311,96 @@ export class Sim {
         continue; // Dead mobs don't move or patrol
       }
 
-      m.patrolTimer -= dt;
-      if (m.patrolTimer <= 0) {
-        if (m.state === 'idle') {
-          // Choose a random angle to walk
-          m.state = 'walking';
-          m.facing = this.rng.next() * Math.PI * 2;
-          m.patrolTimer = this.rng.next() * 3 + 2; // walk for 2 to 5 seconds
-          m.moving = true;
-        } else {
-          // Pause and stand idle
+      if (m.state === 'chasing') {
+        if (p.health <= 0) {
           m.state = 'idle';
-          m.patrolTimer = this.rng.next() * 2.5 + 1.5; // idle for 1.5 to 4 seconds
           m.moving = false;
-        }
-      }
+          m.patrolTimer = this.rng.next() * 2.5 + 1.5;
+        } else {
+          const dx = p.x - m.x;
+          const dz = p.z - m.z;
+          const distance = Math.sqrt(dx * dx + dz * dz);
 
-      if (m.state === 'walking') {
-        const mdx = Math.sin(m.facing) * MOB_WALK_SPEED * dt;
-        const mdz = Math.cos(m.facing) * MOB_WALK_SPEED * dt;
-        
-        const mNextX = m.x + mdx;
-        if (!checkCollision(mNextX, m.z, 0.65)) {
-          m.x = mNextX;
-        } else {
-          m.state = 'idle';
-          m.patrolTimer = this.rng.next() * 2;
-          m.moving = false;
+          if (distance > 1.5) {
+            m.facing = Math.atan2(dx, dz);
+            m.moving = true;
+            
+            const runSpeed = 3.8;
+            const mdx = Math.sin(m.facing) * runSpeed * dt;
+            const mdz = Math.cos(m.facing) * runSpeed * dt;
+            
+            const mNextX = m.x + mdx;
+            if (!checkCollision(mNextX, m.z, this.zone.colliders, 0.65)) {
+              m.x = mNextX;
+            }
+            const mNextZ = m.z + mdz;
+            if (!checkCollision(m.x, mNextZ, this.zone.colliders, 0.65)) {
+              m.z = mNextZ;
+            }
+          } else {
+            m.moving = false;
+            m.attackCooldown -= dt;
+            if (m.attackCooldown <= 0) {
+              // Deal damage based on type: Orc = 10, Goblin = 7, Wolf = 5
+              let dmg = 5;
+              if (m.type === 'orc') dmg = 10;
+              else if (m.type === 'goblin') dmg = 7;
+              else if (m.type === 'wolf') dmg = 5;
+
+              p.health = Math.max(0, p.health - dmg);
+
+              // Push combat event targeting player
+              this.combatEvents.push({
+                id: this.generateId('evt'),
+                type: 'damage',
+                targetId: 'player',
+                value: dmg,
+                x: p.x,
+                z: p.z
+              });
+
+              m.attackCooldown = 1.5;
+            }
+          }
         }
-        
-        const mNextZ = m.z + mdz;
-        if (!checkCollision(m.x, mNextZ, 0.65)) {
-          m.z = mNextZ;
-        } else {
-          m.state = 'idle';
-          m.patrolTimer = this.rng.next() * 2;
-          m.moving = false;
+      } else {
+        m.patrolTimer -= dt;
+        if (m.patrolTimer <= 0) {
+          if (m.state === 'idle') {
+            // Choose a random angle to walk
+            m.state = 'walking';
+            m.facing = this.rng.next() * Math.PI * 2;
+            m.patrolTimer = this.rng.next() * 3 + 2; // walk for 2 to 5 seconds
+            m.moving = true;
+          } else {
+            // Pause and stand idle
+            m.state = 'idle';
+            m.patrolTimer = this.rng.next() * 2.5 + 1.5; // idle for 1.5 to 4 seconds
+            m.moving = false;
+          }
+        }
+
+        if (m.state === 'walking') {
+          const mdx = Math.sin(m.facing) * MOB_WALK_SPEED * dt;
+          const mdz = Math.cos(m.facing) * MOB_WALK_SPEED * dt;
+          
+          const mNextX = m.x + mdx;
+          if (!checkCollision(mNextX, m.z, this.zone.colliders, 0.65)) {
+            m.x = mNextX;
+          } else {
+            m.state = 'idle';
+            m.patrolTimer = this.rng.next() * 2;
+            m.moving = false;
+          }
+          
+          const mNextZ = m.z + mdz;
+          if (!checkCollision(m.x, mNextZ, this.zone.colliders, 0.65)) {
+            m.z = mNextZ;
+          } else {
+            m.state = 'idle';
+            m.patrolTimer = this.rng.next() * 2;
+            m.moving = false;
+          }
         }
       }
     }

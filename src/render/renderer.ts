@@ -4,8 +4,6 @@ import { CharacterVisual } from './character';
 import type { InputState } from '../game/input';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
-import { WORLD_LAYOUT } from '../sim/world';
-
 // Orbit camera state initial values (world-relative orbit)
 const INITIAL_DIST   = 18;
 const INITIAL_THETA  = 0;     // 0 = behind player along -Z (in world space)
@@ -875,7 +873,7 @@ export class Renderer {
 
     // 1. Paved Town Square
     const pavedTex = createCobblestoneTexture();
-    const pavedGeo = new THREE.PlaneGeometry(WORLD_LAYOUT.townSquare.width, WORLD_LAYOUT.townSquare.depth);
+    const pavedGeo = new THREE.PlaneGeometry(this.sim.zone.townSquare.width, this.sim.zone.townSquare.depth);
     const pavedMat = new THREE.MeshLambertMaterial({ map: pavedTex });
     const pavedSquare = new THREE.Mesh(pavedGeo, pavedMat);
     pavedSquare.rotation.x = -Math.PI / 2;
@@ -885,7 +883,7 @@ export class Renderer {
 
     // 2. Road Segments
     const roadTex = createRoadTexture();
-    for (const road of WORLD_LAYOUT.roads) {
+    for (const road of this.sim.zone.roads) {
       const dx = road.endX - road.startX;
       const dz = road.endZ - road.startZ;
       const length = Math.sqrt(dx * dx + dz * dz);
@@ -910,17 +908,17 @@ export class Renderer {
     }
 
     // 3. Buildings
-    for (const b of WORLD_LAYOUT.buildings) {
+    for (const b of this.sim.zone.buildings) {
       loadProp(b.url, b.x, b.z, b.rotY, b.scale);
     }
 
     // 4. Props
-    for (const p of WORLD_LAYOUT.props) {
+    for (const p of this.sim.zone.props) {
       loadProp(p.url, p.x, p.z, p.rotY, p.scale);
     }
 
     // 5. Foliage / Scenery
-    for (const f of WORLD_LAYOUT.foliage) {
+    for (const f of this.sim.zone.foliage) {
       loadProp(f.url, f.x, f.z, 0, f.scale);
     }
   }

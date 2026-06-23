@@ -1,0 +1,94 @@
+{
+  "name": "Starter Zone",
+  "townSquare": {
+    "width": 32,
+    "depth": 28
+  },
+  "buildings": [
+    { "url": "models/props/inn.glb", "x": -12, "z": -8, "rotY": 1.5707963267948966, "scale": 1.2 },
+    { "url": "models/props/blacksmith.glb", "x": 12, "z": -8, "rotY": -1.5707963267948966, "scale": 1.2 },
+    { "url": "models/props/house_1.glb", "x": -8, "z": 12, "rotY": 3.141592653589793, "scale": 1.2 },
+    { "url": "models/props/house_2.glb", "x": 8, "z": 12, "rotY": 3.141592653589793, "scale": 1.2 },
+    { "url": "models/props/house_3.glb", "x": 0, "z": 18, "rotY": 3.141592653589793, "scale": 1.2 }
+  ],
+  "props": [
+    { "url": "models/props/well.glb", "x": 0, "z": -6, "rotY": 0.0, "scale": 1.0 },
+    { "url": "models/props/bonfire.glb", "x": 0, "z": -2, "rotY": 0.0, "scale": 1.0 },
+    
+    { "url": "models/props/bonfire.glb", "x": 48, "z": 48, "rotY": 0.0, "scale": 1.0 },
+    { "url": "models/props/tent_open.glb", "x": 48, "z": 52, "rotY": 0.0, "scale": 1.0 },
+    { "url": "models/props/tent_small.glb", "x": 52, "z": 48, "rotY": 1.5707963267948966, "scale": 1.0 },
+    { "url": "models/props/weapon_stand.glb", "x": 44, "z": 46, "rotY": -0.7853981633974483, "scale": 1.0 },
+    { "url": "models/props/crate_wooden.glb", "x": 45, "z": 52, "rotY": 0.2, "scale": 1.0 },
+
+    { "url": "models/foliage/rock_1.glb", "x": -62, "z": -57, "rotY": 0.5, "scale": 1.8 },
+    { "url": "models/foliage/rock_2.glb", "x": -57, "z": -63, "rotY": 1.2, "scale": 2.0 },
+    { "url": "models/props/barrel.glb", "x": -60, "z": -55, "rotY": 0.1, "scale": 1.0 },
+
+    { "url": "models/props/bonfire.glb", "x": 72, "z": -72, "rotY": 0.0, "scale": 1.0 },
+    { "url": "models/props/tent_small.glb", "x": 70, "z": -76, "rotY": 0.7853981633974483, "scale": 1.0 },
+    { "url": "models/props/tent_small.glb", "x": 76, "z": -70, "rotY": -0.7853981633974483, "scale": 1.0 },
+    { "url": "models/props/barrel.glb", "x": 74, "z": -74, "rotY": 0.0, "scale": 1.0 },
+    { "url": "models/props/crate_wooden.glb", "x": 69, "z": -69, "rotY": 0.4, "scale": 1.0 }
+  ],
+  "roads": [
+    { "startX": 12, "startZ": 12, "endX": 48, "endZ": 48, "width": 3.5 },
+    { "startX": -12, "startZ": -12, "endX": -60, "endZ": -60, "width": 3.5 },
+    { "startX": 12, "startZ": -12, "endX": 72, "endZ": -72, "width": 3.5 },
+    { "startX": 0, "startZ": -6, "endX": 12, "endZ": 12, "width": 3.0 },
+    { "startX": 0, "startZ": -6, "endX": -12, "endZ": -12, "width": 3.0 },
+    { "startX": 0, "startZ": -6, "endX": 12, "endZ": -12, "width": 3.0 }
+  ],
+  "colliders": [
+    { "minX": -14.8, "maxX": -9.2, "minZ": -12.5, "maxZ": -3.5 },
+    { "minX": 9.2, "maxX": 14.8, "minZ": -12.5, "maxZ": -3.5 },
+    { "minX": -10.8, "maxX": -5.2, "minZ": 9.5, "maxZ": 14.5 },
+    { "minX": 5.2, "maxX": 10.8, "minZ": 9.5, "maxZ": 14.5 },
+    { "minX": -2.8, "maxX": 2.8, "minZ": 15.5, "maxZ": 20.5 },
+    { "minX": -1.3, "maxX": 1.3, "minZ": -7.3, "maxZ": -4.7 },
+
+    { "minX": 46.2, "maxX": 49.8, "minZ": 50.2, "maxZ": 53.8 },
+    { "minX": 50.2, "maxX": 53.8, "minZ": 46.2, "maxZ": 49.8 },
+    { "minX": 43.0, "maxX": 45.0, "minZ": 45.0, "maxZ": 47.0 },
+
+    { "minX": -63.5, "maxX": -60.5, "minZ": -58.5, "maxZ": -55.5 },
+    { "minX": -58.5, "maxX": -55.5, "minZ": -64.5, "maxZ": -61.5 },
+
+    { "minX": 68.2, "maxX": 71.8, "minZ": -77.8, "maxZ": -74.2 },
+    { "minX": 74.2, "maxX": 77.8, "minZ": -71.8, "maxZ": -68.2 }
+  ],
+  "foliage": [
+    { "url": "models/foliage/pine_1.glb", "x": -20, "z": -5, "scale": 1.3 },
+    { "url": "models/foliage/oak_1.glb", "x": 20, "z": 5, "scale": 1.4 },
+    { "url": "models/foliage/pine_1.glb", "x": -15, "z": 22, "scale": 1.1 },
+    { "url": "models/foliage/oak_1.glb", "x": 18, "z": -25, "scale": 1.2 },
+    { "url": "models/foliage/rock_1.glb", "x": -22, "z": 15, "scale": 1.5 },
+    { "url": "models/foliage/rock_2.glb", "x": 25, "z": -15, "scale": 1.6 }
+  ],
+  "camps": [
+    {
+      "mobType": "orc",
+      "spawns": [
+        { "x": 48, "z": 45, "health": 60, "maxHealth": 60 },
+        { "x": 45, "z": 49, "health": 60, "maxHealth": 60 },
+        { "x": 51, "z": 51, "health": 60, "maxHealth": 60 }
+      ]
+    },
+    {
+      "mobType": "wolf",
+      "spawns": [
+        { "x": -60, "z": -60, "health": 40, "maxHealth": 40 },
+        { "x": -63, "z": -63, "health": 40, "maxHealth": 40 },
+        { "x": -57, "z": -57, "health": 40, "maxHealth": 40 }
+      ]
+    },
+    {
+      "mobType": "goblin",
+      "spawns": [
+        { "x": 72, "z": -72, "health": 50, "maxHealth": 50 },
+        { "x": 75, "z": -75, "health": 50, "maxHealth": 50 },
+        { "x": 69, "z": -69, "health": 50, "maxHealth": 50 }
+      ]
+    }
+  ]
+}
