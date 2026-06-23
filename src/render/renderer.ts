@@ -53,6 +53,7 @@ export class Renderer {
   private threeRenderer!: THREE.WebGLRenderer;
   private playerVisual!: CharacterVisual;
   private mobVisuals: CharacterVisual[] = [];
+  private npcVisuals: CharacterVisual[] = [];
   private sim: Sim;
   private orbitTheta = INITIAL_THETA;
   private orbitPhi   = INITIAL_PHI;
@@ -148,6 +149,11 @@ export class Renderer {
     }
     this.lootVisuals.clear();
 
+    for (const v of this.npcVisuals) {
+      this.scene.remove(v.root);
+    }
+    this.npcVisuals = [];
+
     this.threeRenderer.dispose();
     this.hud.dispose();
     this.mobVisuals = [];
@@ -224,6 +230,26 @@ export class Renderer {
       v.root.rotation.y = m.facing;
       v.root.visible = m.health > 0;
       v.update(dt, { moving: m.moving, movingBack: false });
+    }
+
+    // ── NPC visuals ─────────────────────────────────────────────────────
+    const npcs = sim.zone.npcs || [];
+    while (this.npcVisuals.length < npcs.length) {
+      const npcDef = npcs[this.npcVisuals.length];
+      const mv = new CharacterVisual({
+        url: npcDef.modelUrl,
+        height: 2.2,
+        clips: { idle: 'Idle' }
+      });
+      this.scene.add(mv.root);
+      this.npcVisuals.push(mv);
+    }
+    for (let i = 0; i < npcs.length; i++) {
+      const npcDef = npcs[i];
+      const v = this.npcVisuals[i];
+      v.root.position.set(npcDef.x, 0, npcDef.z);
+      v.root.rotation.y = npcDef.rotY;
+      v.update(dt, { moving: false, movingBack: false });
     }
 
     // ── Target ring ─────────────────────────────────────────────────────
@@ -320,8 +346,14 @@ export class Renderer {
       this.hud.showLootContainer(sim.lootContainers[sim.nearLootContainerIndex], sim);
     }
 
+    this.hud.updateNpcPrompt(sim.nearNpcIndex, sim.zone.npcs);
+    if (input.interact && sim.nearNpcIndex >= 0 && !this.hud.isDialogueOpen()) {
+      this.hud.showDialogue(sim.zone.npcs[sim.nearNpcIndex]);
+    }
+
     this.hud.updatePlayer(p, this.playerVisual.height, this.camera, rendEl);
     this.hud.updateMobs(sim.mobs, this.mobVisuals, this.camera, rendEl);
+    this.hud.updateNpcs(sim.zone.npcs, this.npcVisuals, this.camera, rendEl);
     this.hud.updateBuildings(sim.zone.buildings, this.camera, rendEl);
     this.hud.updateCastBar(p.activeCast);
     this.hud.updateActionSlots(p, activeTarget !== null);

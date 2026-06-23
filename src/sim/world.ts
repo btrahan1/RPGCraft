@@ -96,6 +96,17 @@ export interface PortalDef {
   spawnZ: number;
 }
 
+export interface NpcDef {
+  id: string;
+  name: string;
+  title: string;
+  modelUrl: string;
+  x: number;
+  z: number;
+  rotY: number;
+  dialogue: string[];
+}
+
 export interface ZoneData {
   name: string;
   /** Name used to reference this zone in the registry and portal targets */
@@ -111,6 +122,7 @@ export interface ZoneData {
   foliage: FoliageProp[];
   camps: CampDef[];
   portals: PortalDef[];
+  npcs: NpcDef[];
 }
 
 /**

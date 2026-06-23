@@ -89,5 +89,46 @@
       "spawnX": 0,
       "spawnZ": 0
     }
+  ],
+  "npcs": [
+    {
+      "id": "npc_kareem",
+      "name": "Merchant Kareem",
+      "title": "Desert Merchant",
+      "modelUrl": "models/chars/players/rogue_hooded.glb",
+      "x": 198,
+      "z": 210,
+      "rotY": 0.0,
+      "dialogue": [
+        "Greetings, traveler! I carry rare goods from across the Scorching Desert.",
+        "Take a look, but touch with care. The desert wind makes the items fragile!"
+      ]
+    },
+    {
+      "id": "npc_zarek",
+      "name": "Armorer Zarek",
+      "title": "Forge Master",
+      "modelUrl": "models/chars/players/barbarian.glb",
+      "x": 210,
+      "z": 202,
+      "rotY": -1.57,
+      "dialogue": [
+        "Hmph. What do you want, mage? Looking for steel that doesn't melt in this sun?",
+        "My forge burns hotter than the desert. Speak quickly or let me work."
+      ]
+    },
+    {
+      "id": "npc_marra",
+      "name": "Barkeep Marra",
+      "title": "Oasis Tavern Keeper",
+      "modelUrl": "models/chars/players/rogue.glb",
+      "x": 202,
+      "z": 194,
+      "rotY": 1.57,
+      "dialogue": [
+        "Welcome to the Oasis Tavern! Water is free, but the cold brews will cost you copper.",
+        "Rest as long as you like. The desert outside is unforgiving."
+      ]
+    }
   ]
 }

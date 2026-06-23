@@ -172,6 +172,7 @@ export class Sim {
   /** Index of the portal the player is currently near, or -1 if none. */
   nearPortalIndex: number = -1;
   nearLootContainerIndex: number = -1;
+  nearNpcIndex: number = -1;
 
   private nextId = 10;
 
@@ -302,6 +303,20 @@ export class Sim {
       if (dist <= closestLootDist) {
         this.nearLootContainerIndex = i;
         closestLootDist = dist;
+      }
+    }
+
+    // ── NPC Proximity Check ─────────────────────────────────────────────
+    this.nearNpcIndex = -1;
+    let closestNpcDist = 2.5;
+    for (let i = 0; i < this.zone.npcs.length; i++) {
+      const npc = this.zone.npcs[i];
+      const dx = npc.x - p.x;
+      const dz = npc.z - p.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      if (dist <= closestNpcDist) {
+        this.nearNpcIndex = i;
+        closestNpcDist = dist;
       }
     }
 

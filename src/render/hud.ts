@@ -48,6 +48,11 @@ export class Hud {
   private _lootVisible = false;
   private inventoryPanel!: HTMLDivElement;
   private _inventoryVisible = false;
+  private npcPrompt!: HTMLDivElement;
+  private dialogueContainerEl!: HTMLDivElement;
+  private _dialogueVisible = false;
+  private currentDialoguePage = 0;
+  private activeDialogueNpc: any = null;
 
   /** Reused across projection calls to avoid per-frame allocation. */
   private readonly proj = new THREE.Vector3();
@@ -63,6 +68,7 @@ export class Hud {
     this.buildPortalUI();
     this.buildLootUI();
     this.buildInventoryUI();
+    this.buildNpcUI();
     this.buildHudMessage();
 
     // Close panels on Escape, toggle inventory on B/I
@@ -76,6 +82,10 @@ export class Hud {
         }
         if (this._lootVisible) {
           this.closeLoot();
+          handeld = true;
+        }
+        if (this._dialogueVisible) {
+          this.closeDialogue();
           handeld = true;
         }
         if (this._inventoryVisible) {
@@ -191,6 +201,13 @@ export class Hud {
       '.inventory-slot .icon-potion{width:26px;height:26px;background:radial-gradient(circle,#f87171,#b91c1c);border-radius:50%}',
       '.inventory-slot .icon-ring{width:26px;height:26px;background:radial-gradient(circle,#facc15,#ca8a04);border-radius:50%;border:2px solid #78350f}',
       '.inventory-slot .icon-sand{width:26px;height:26px;background:radial-gradient(circle,#fef08a,#eab308);border-radius:10%}',
+      '.dialogue-panel{position:absolute;bottom:120px;left:50%;transform:translateX(-50%);background:rgba(10,10,20,0.95);border:2px solid #22c55e;border-radius:12px;padding:18px 24px;width:440px;box-shadow:0 6px 25px rgba(0,0,0,0.8);z-index:30;pointer-events:auto;display:none;flex-direction:column;color:#fff}',
+      '.dialogue-title{font-size:16px;font-weight:bold;color:#86efac;margin-bottom:2px}',
+      '.dialogue-subtitle{font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px}',
+      '.dialogue-text{font-size:13px;color:#fff;line-height:1.5;margin-bottom:14px;min-height:48px}',
+      '.dialogue-footer{display:flex;justify-content:flex-end;gap:10px}',
+      '.dialogue-btn{padding:6px 16px;background:#22c55e;color:#fff;border:none;border-radius:4px;font-weight:bold;cursor:pointer;font-size:12px;outline:none}',
+      '.dialogue-btn:hover{background:#16a34a}',
     ].join('');
     document.head.appendChild(s);
   }
@@ -674,11 +691,86 @@ export class Hud {
     this.uiContainer.appendChild(this.inventoryPanel);
   }
 
+  private buildNpcUI(): void {
+    this.npcPrompt = document.createElement('div');
+    this.npcPrompt.className = 'portal-prompt';
+    this.npcPrompt.style.borderColor = '#22c55e';
+    this.npcPrompt.style.color = '#bbf7d0';
+    this.npcPrompt.style.boxShadow = '0 0 20px rgba(34, 197, 94, 0.4)';
+    this.uiContainer.appendChild(this.npcPrompt);
+
+    this.dialogueContainerEl = document.createElement('div');
+    this.dialogueContainerEl.className = 'dialogue-panel';
+    this.dialogueContainerEl.style.display = 'none';
+    this.uiContainer.appendChild(this.dialogueContainerEl);
+  }
+
   isLootOpen(): boolean { return this._lootVisible; }
 
   updateLootPrompt(nearLootIndex: number): void {
     this.lootPrompt.style.display =
       (nearLootIndex >= 0 && !this._lootVisible) ? 'block' : 'none';
+  }
+
+  isDialogueOpen(): boolean { return this._dialogueVisible; }
+
+  updateNpcPrompt(nearNpcIndex: number, npcs: any[]): void {
+    const npc = npcs[nearNpcIndex];
+    if (npc && !this._dialogueVisible) {
+      this.npcPrompt.innerHTML = `Press <span class="key-hint" style="color:#22c55e">E</span> to talk to ${npc.name}`;
+      this.npcPrompt.style.display = 'block';
+    } else {
+      this.npcPrompt.style.display = 'none';
+      if (this._dialogueVisible && this.activeDialogueNpc) {
+        const stillInZone = npcs.find(n => n.id === this.activeDialogueNpc.id);
+        const currentIndexNpc = npcs[nearNpcIndex];
+        if (!stillInZone || currentIndexNpc !== this.activeDialogueNpc) {
+          this.closeDialogue();
+        }
+      }
+    }
+  }
+
+  showDialogue(npc: any): void {
+    this.npcPrompt.style.display = 'none';
+    this._dialogueVisible = true;
+    this.activeDialogueNpc = npc;
+    this.currentDialoguePage = 0;
+    this.renderDialogue();
+  }
+
+  renderDialogue(): void {
+    const npc = this.activeDialogueNpc;
+    if (!npc) return;
+
+    const pageText = npc.dialogue[this.currentDialoguePage] || 'Hello!';
+    const isLastPage = this.currentDialoguePage === npc.dialogue.length - 1;
+
+    let html = `<div class="dialogue-title">${npc.name}</div>`;
+    html += `<div class="dialogue-subtitle">${npc.title}</div>`;
+    html += `<div class="dialogue-text">${pageText}</div>`;
+    html += `<div class="dialogue-footer"><button class="dialogue-btn">${isLastPage ? 'Close (Esc)' : 'Next'}</button></div>`;
+
+    this.dialogueContainerEl.innerHTML = html;
+    this.dialogueContainerEl.style.display = 'flex';
+
+    const btn = this.dialogueContainerEl.querySelector('.dialogue-btn');
+    if (btn) {
+      btn.addEventListener('click', () => {
+        if (isLastPage) {
+          this.closeDialogue();
+        } else {
+          this.currentDialoguePage++;
+          this.renderDialogue();
+        }
+      });
+    }
+  }
+
+  closeDialogue(): void {
+    this.dialogueContainerEl.style.display = 'none';
+    this._dialogueVisible = false;
+    this.activeDialogueNpc = null;
   }
 
   showLootContainer(container: any, sim: any): void {
@@ -801,6 +893,49 @@ export class Hud {
         slot.addEventListener('mouseleave', () => tip.style.display = 'none');
       }
     });
+  }
+
+  /** Update friendly NPC nameplates. */
+  updateNpcs(
+    npcs: any[],
+    visuals: CharacterVisual[],
+    camera: THREE.Camera,
+    rendEl: HTMLElement,
+  ): void {
+    const activeNpcIds = new Set(npcs.map(n => n.id));
+    for (const [id, el] of this.entityUIs) {
+      if (id.startsWith('npc_') && !activeNpcIds.has(id)) {
+        el.remove();
+        this.entityUIs.delete(id);
+      }
+    }
+
+    for (let i = 0; i < npcs.length; i++) {
+      const npc = npcs[i];
+      const v = visuals[i];
+      if (!v) continue;
+
+      let el = this.entityUIs.get(npc.id);
+      if (!el) {
+        el = document.createElement('div');
+        el.className = 'floating-ui-bar';
+        el.innerHTML =
+          `<div class="name-label" style="color:#22c55e">${npc.name}</div>` +
+          `<div class="name-label" style="font-size:7px; color:rgba(255,255,255,0.5); font-weight:normal; margin-top:-1px">&lt;${npc.title}&gt;</div>`;
+        this.uiContainer.appendChild(el);
+        this.entityUIs.set(npc.id, el);
+      }
+
+      this.proj.set(npc.x, 2.4, npc.z);
+      this.proj.project(camera);
+      if (this.proj.z > 1) {
+        el.style.display = 'none';
+      } else {
+        const sx = (this.proj.x * 0.5 + 0.5) * rendEl.clientWidth;
+        const sy = (-(this.proj.y * 0.5) + 0.5) * rendEl.clientHeight;
+        el.style.cssText = `left:${sx}px;top:${sy}px;display:flex; border-color: rgba(34,197,94,0.4); background: rgba(10,10,20,0.85); padding: 3px 6px; width: auto; transform: translate(-50%, -100%)`;
+      }
+    }
   }
 }
 
