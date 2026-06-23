@@ -21,6 +21,9 @@ export class WorldRenderer {
       new THREE.MeshLambertMaterial({ map: groundTex }),
     );
     ground.rotation.x = -Math.PI / 2;
+    if (isDesert) {
+      ground.position.set(200, 0, 200);
+    }
     ground.receiveShadow = true;
     scene.add(ground);
 

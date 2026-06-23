@@ -16,7 +16,20 @@
     { "url": "models/props/bonfire.glb", "x": 200, "z": 204, "rotY": 0.0, "scale": 1.0 },
     { "url": "models/props/barrel.glb", "x": 194, "z": 208, "rotY": 0.3, "scale": 1.0 },
     { "url": "models/props/crate_wooden.glb", "x": 206, "z": 208, "rotY": 0.5, "scale": 1.0 },
-    { "url": "models/props/weapon_stand.glb", "x": 205, "z": 197, "rotY": 0.5, "scale": 1.0 }
+    { "url": "models/props/weapon_stand.glb", "x": 205, "z": 197, "rotY": 0.5, "scale": 1.0 },
+
+    { "url": "models/props/bonfire.glb", "x": 261, "z": 263, "rotY": 0.0, "scale": 1.0 },
+    { "url": "models/props/crate_wooden.glb", "x": 263, "z": 261, "rotY": 0.5, "scale": 1.0 },
+    { "url": "models/props/barrel.glb", "x": 259, "z": 264, "rotY": 0.0, "scale": 1.0 },
+
+    { "url": "models/props/tent_small.glb", "x": 139, "z": 266, "rotY": 3.14159, "scale": 1.1 },
+    { "url": "models/props/bonfire.glb", "x": 139, "z": 263, "rotY": 0.0, "scale": 1.0 },
+    { "url": "models/props/crate_wooden.glb", "x": 136, "z": 264, "rotY": 0.8, "scale": 1.0 },
+
+    { "url": "models/props/bonfire.glb", "x": 263, "z": 139, "rotY": 0.0, "scale": 1.0 },
+    { "url": "models/props/tent_open.glb", "x": 263, "z": 143, "rotY": 3.14159, "scale": 1.0 },
+    { "url": "models/props/crate_wooden.glb", "x": 266, "z": 137, "rotY": 0.3, "scale": 1.0 },
+    { "url": "models/props/barrel.glb", "x": 260, "z": 141, "rotY": 1.1, "scale": 1.0 }
   ],
   "roads": [
     { "startX": 200, "startZ": 200, "endX": 230, "endZ": 230, "width": 3.0 },

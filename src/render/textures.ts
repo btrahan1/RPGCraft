@@ -16,6 +16,7 @@ export function canvasTexture(
   t.wrapS = THREE.RepeatWrapping;
   t.wrapT = THREE.RepeatWrapping;
   t.repeat.set(rpt, rpt);
+  t.anisotropy = 8; // Keep textures sharp at grazing angles
   return t;
 }
 
@@ -60,13 +61,49 @@ export function roadTex(): THREE.CanvasTexture {
 
 export function sandTex(): THREE.CanvasTexture {
   return canvasTexture(256, 256, ctx => {
-    ctx.fillStyle = '#d4b87a';
+    // Base sand color
+    ctx.fillStyle = '#dfb56c';
     ctx.fillRect(0, 0, 256, 256);
-    for (let i = 0; i < 2000; i++) {
-      ctx.fillStyle = Math.random() > 0.5 ? '#c4a86a' : '#e4c88a';
-      ctx.fillRect(Math.random() * 256, Math.random() * 256, 2, 2);
+
+    // Draw thick 3D-shaded wind ripples (shadow first, then highlight offset)
+    const drawWave = (color: string, width: number, yOffset: number) => {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      // Fewer waves (every 64 pixels) so they are larger and clearer
+      for (let y = 32; y < 256; y += 64) {
+        ctx.beginPath();
+        ctx.moveTo(0, y + yOffset);
+        for (let x = 0; x <= 256; x += 16) {
+          const wave = Math.sin((x / 256) * Math.PI * 4) * 12;
+          ctx.lineTo(x, y + wave + yOffset);
+        }
+        ctx.stroke();
+      }
+    };
+
+    // Thick shadow of the wind ripples
+    drawWave('#8c6220', 6, 2);
+    // Highlight of the wind ripples
+    drawWave('#fff3d1', 3, -1);
+
+    // Add large, high-contrast grit specks (coarse particles)
+    for (let i = 0; i < 800; i++) {
+      const rand = Math.random();
+      if (rand < 0.3) {
+        // Large glistening white sand spec
+        ctx.fillStyle = '#fffae8';
+        ctx.fillRect(Math.random() * 256, Math.random() * 256, 3, 3);
+      } else if (rand < 0.7) {
+        // Medium dark sand spec
+        ctx.fillStyle = '#ab7a30';
+        ctx.fillRect(Math.random() * 256, Math.random() * 256, 3, 3);
+      } else {
+        // Large deep brown dirt/grit spec
+        ctx.fillStyle = '#604418';
+        ctx.fillRect(Math.random() * 256, Math.random() * 256, 4, 4);
+      }
     }
-  }, 40);
+  }, 12);
 }
 
 export function desertTileTex(): THREE.CanvasTexture {
